@@ -8,7 +8,12 @@ class ProjectNotFoundError(ResourceNotFoundError):
 
 
 class SkillGapService:
-    def analyze(self, project_id: str) -> dict:
+    def analyze(
+        self,
+        project_id: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> dict:
         if not project_id or not project_id.strip():
             raise ValueError("project_id is required.")
 
@@ -16,11 +21,10 @@ class SkillGapService:
             raise ProjectNotFoundError(project_id)
 
         required_skills = project_repository.get_required_skills(project_id)
-        team_skill_levels = project_repository.get_team_skill_levels(project_id)
-        team_skill_map = {
-            row["skill_id"]: row
-            for row in team_skill_levels
-        }
+        team_skill_levels = project_repository.get_team_skill_levels(
+            project_id, start_date, end_date
+        )
+        team_skill_map = {row["skill_id"]: row for row in team_skill_levels}
 
         skills = []
         covered_count = 0
@@ -59,10 +63,14 @@ class SkillGapService:
             )
 
         total = len(required_skills)
-        coverage_percent = round(
-            covered_count / total * 100,
-            2,
-        ) if total else 0
+        coverage_percent = (
+            round(
+                covered_count / total * 100,
+                2,
+            )
+            if total
+            else 0
+        )
 
         return {
             "project_id": project_id,

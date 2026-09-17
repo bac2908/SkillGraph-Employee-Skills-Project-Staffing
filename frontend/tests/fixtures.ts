@@ -1,6 +1,7 @@
 import type { Page as BrowserPage } from '@playwright/test';
 import type { Role, User } from '../src/auth';
 import type { ActivityEvent } from '../src/types';
+import { peakAllocation, planningToday } from '../src/allocation';
 
 // Browser-only fixtures. The application itself always uses the real API.
 export async function mockApi(
@@ -82,7 +83,7 @@ export async function mockApi(
       kind === 'PROJECT'
         ? ['project_id', 'name', 'description', 'status']
         : kind === 'WORKS_ON'
-          ? ['project_id', 'employee_id', 'role', 'allocation']
+          ? ['project_id', 'employee_id', 'role', 'allocation', 'start_date', 'end_date']
           : ['project_id', 'skill_id', 'min_level', 'priority'];
     const snapshot = (value: any) =>
       value == null
@@ -127,15 +128,16 @@ export async function mockApi(
   }
   function allocationItems(items: any[]) {
     return items.map((item) => {
-      const total = Object.entries(relations)
+      const all = Object.entries(relations)
         .filter(([key]) => key.endsWith('/assignments'))
         .flatMap(([, list]) => list)
-        .filter((a) => a.employee_id === item.employee_id)
-        .reduce((sum, a) => sum + a.allocation, 0);
+        .filter((a) => a.employee_id === item.employee_id);
+      const total = peakAllocation(all, planningToday(), planningToday());
       return {
         ...item,
         employee_total_allocation: total,
         employee_remaining_allocation: 100 - total,
+        period_peak_allocation: peakAllocation(all, item.start_date || '', item.end_date || ''),
       };
     });
   }
@@ -308,6 +310,10 @@ export async function mockApi(
     if (relation === 'recommendations')
       return json({
         project_id: id,
+        start_date: url.searchParams.get('start_date') || planningToday(),
+        end_date: url.searchParams.get('end_date') || planningToday(),
+        required_allocation: Number(url.searchParams.get('required_allocation') || 1),
+        capacity_only: url.searchParams.get('capacity_only') === 'true',
         summary: {
           uncovered_skill_count: id === 'PROJ001' ? 1 : 0,
           candidate_count: id === 'PROJ001' ? 2 : 0,
@@ -320,6 +326,9 @@ export async function mockApi(
                 ...e,
                 status: 'AVAILABLE',
                 rank: i + 1,
+                period_peak_allocation: i ? 0 : 80,
+                period_remaining_allocation: i ? 100 : 20,
+                can_allocate: true,
                 matched_skill_count: 1,
                 matched_skills: [
                   { skill_id: 'SK007', skill: 'Docker', level: i + 3, required_level: 3 },
@@ -357,11 +366,11 @@ export async function mockApi(
           const other = Object.entries(relations)
             .filter(([k]) => k.endsWith('/assignments') && k !== key)
             .flatMap(([, v]) => v)
-            .filter((a) => a.employee_id === relatedId)
-            .reduce((sum, a) => sum + a.allocation, 0);
-          if (other + body.allocation > 100)
+            .filter((a) => a.employee_id === relatedId);
+          const peak = peakAllocation(other, body.start_date || '', body.end_date || '');
+          if (peak + body.allocation > 100)
             return json(
-              { detail: `Employee would exceed 100% allocation (${other + body.allocation}%).` },
+              { detail: `Employee would exceed 100% allocation (${peak + body.allocation}%).` },
               409,
             );
         }

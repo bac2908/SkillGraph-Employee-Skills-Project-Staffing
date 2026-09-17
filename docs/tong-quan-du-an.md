@@ -8,6 +8,10 @@
 
 **Mốc đối chiếu mã nguồn và tài liệu:** 12/09/2026.
 
+**Cập nhật nghiệp vụ 17/09/2026:** [phân bổ theo thời gian và gợi ý dung lượng](allocation-planning.md)
+đã bổ sung BE/FE; các số liệu nghiệm thu ở những mốc cũ không thay thế kiểm
+thử bản mới. Chưa nghiệm thu graph thật hoặc triển khai production.
+
 Tài liệu này giải thích dự án làm gì, vì sao cần, ai sử dụng, cách hoạt động và
 kết quả hướng tới khi hoàn thiện. Các mục tiêu chưa làm được ghi rõ là đề xuất
 hoặc điều kiện nghiệm thu; không xem chúng là chức năng đang có.
@@ -143,7 +147,7 @@ dự án (`Project`).
 | Quan hệ | Ý nghĩa | Thuộc tính nghiệp vụ chính |
 | --- | --- | --- |
 | `Employee - HAS_SKILL -> Skill` | Nhân viên có kỹ năng | `level`: cấp 1–5; `years_experience`: số năm kinh nghiệm |
-| `Employee - WORKS_ON -> Project` | Nhân viên được phân công vào dự án | `role`: vai trò công việc; `allocation`: phần trăm phân bổ |
+| `Employee - WORKS_ON -> Project` | Nhân viên được phân công vào dự án | `role`, `allocation`, `start_date`, `end_date` (ngày tùy chọn) |
 | `Project - REQUIRES_SKILL -> Skill` | Dự án cần kỹ năng | `min_level`: cấp tối thiểu 1–5; `priority`: MUST/SHOULD/NICE |
 
 `role` trên phân công, ví dụ Backend Developer, **khác** role đăng nhập
@@ -184,36 +188,41 @@ không phải kết quả kiểm tra năng lực độc lập do hệ thống th
 1. Lấy những yêu cầu đang `GAP` hoặc `MISSING`.
 2. Xét người có trạng thái `AVAILABLE`, chưa là thành viên dự án và có ít
    nhất một kỹ năng thiếu đạt cấp độ yêu cầu.
-3. Xếp theo số kỹ năng phù hợp giảm dần; tiếp theo là số thành viên hiện tại
+3. Ưu tiên đủ dung lượng trong kỳ kế hoạch trước, có tùy chọn chỉ hiện nhóm
+   này. Trong nhóm, xếp theo số kỹ năng phù hợp giảm dần; tiếp theo là số thành viên
    có quan hệ làm chung qua dự án khác; rồi tổng cấp độ kỹ năng phù hợp; cuối
    cùng dùng mã nhân viên để thứ tự ổn định.
-4. Trả thông tin kỹ năng khớp và quan hệ cộng tác để quản lý xem xét.
+4. Trả kỹ năng khớp, cộng tác, dung lượng tối thiểu còn lại trong kỳ và kết quả
+   đủ/thiếu dung lượng cho quản lý xem xét. Không phải điểm hiệu suất nhân viên.
 
-Quan hệ cộng tác được suy ra từ các cạnh `WORKS_ON` đang lưu, không phải hồ sơ
-lịch sử đầy đủ có mốc thời gian. Priority và số năm kinh nghiệm chưa trực tiếp
+Quan hệ cộng tác suy ra từ các cạnh `WORKS_ON` có thời gian giao nhau và đã
+bắt đầu; ngày thiếu coi là không giới hạn. Đây không phải hồ sơ cộng tác đầy
+đủ đã xác minh. Priority và số năm kinh nghiệm chưa trực tiếp
 tham gia thứ tự xếp hạng. Nếu mọi yêu cầu đã được đáp ứng, danh sách gợi ý rỗng.
 
-**Gợi ý chưa lọc theo allocation còn lại**. Trạng thái `AVAILABLE` không tự
-được đồng bộ từ phần trăm phân bổ; quản lý cần đọc cả hai thông tin. Có tên
-trong danh sách không bảo đảm người đó nhận được mức allocation mong muốn.
+**Gợi ý đã xét allocation theo kỳ**, FE mặc định lọc đủ tỷ lệ cần. Trạng thái
+`AVAILABLE` không tự đồng bộ từ allocation. Gợi ý không giữ chỗ dung lượng;
+BE kiểm tra lại khi lưu. Coverage trong kỳ chỉ dùng thành viên xuyên suốt kỳ,
+chưa mô phỏng đội thay người nối tiếp; biểu đồ riêng thể hiện coverage hôm nay.
 
 ### 6.3. Chặn phân bổ vượt 100%
 
 Mỗi phân công có allocation nguyên từ 1 đến 100. Khi thêm/sửa phân công, BE
-khóa theo nhân viên và kiểm tra tổng ở các dự án khác cộng allocation mới
-không vượt 100%, trong cùng transaction ghi dữ liệu.
+khóa theo nhân viên và kiểm tra tải cao nhất ở các dự án khác trong kỳ cộng
+allocation mới không vượt 100%, trong cùng transaction ghi dữ liệu và audit.
 
-Quy tắc hiện tại cộng mọi `WORKS_ON`, kể cả tới dự án đã hoàn thành. Chưa xét
-ngày bắt đầu/kết thúc, lịch nghỉ phép hay hợp đồng bán thời gian; đây không
-phải hệ thống lập lịch theo ngày. Không thể dùng quy tắc ứng dụng để bảo đảm
-cho dữ liệu bị sửa trực tiếp ở DB ngoài các API kiểm soát.
+Hai ngày là biên bao gồm; ngày thiếu không giới hạn. Tổng hôm nay không lấy
+phân công hết hạn hoặc tương lai; Project hoàn thành không tự giải phóng tải
+nếu chưa sửa ngày kết thúc. Chưa có lịch nghỉ phép/part-time hoặc nhiều đợt
+cho cùng Employee–Project. Không bảo vệ dữ liệu ghi trực tiếp ngoài API.
+Allocation là kế hoạch sử dụng dung lượng, không đo chất lượng nhân viên.
 
 ## 7. Những phần đã triển khai và giới hạn hiện tại
 
 | Nhóm | Đã có | Giới hạn đáng chú ý |
 | --- | --- | --- |
 | Danh mục | CRUD nhân viên, kỹ năng, dự án; tìm kiếm, lọc, phân trang; trang chi tiết | Chưa phải HRM đầy đủ; chưa có CRUD Team trên giao diện |
-| Quan hệ và phân công | Quản lý ba quan hệ chính; vai trò dự án; allocation; kiểm tra xung đột | Chưa phân bổ theo thời gian hoặc tự tối ưu toàn bộ đội hình |
+| Quan hệ và phân công | Ba quan hệ chính; vai trò, allocation theo ngày; kiểm tra tải cao nhất và tổng hôm nay | Chưa có lịch nghỉ/part-time, nhiều đợt cùng cặp hoặc tự tối ưu đội hình |
 | Phân tích | Thiếu hụt kỹ năng, tỷ lệ đáp ứng và gợi ý ứng viên | Dựa trên quy tắc và chất lượng dữ liệu đầu vào |
 | Dashboard | API tổng hợp có giới hạn, chọn dự án, xem phân tích | Một số selector/hộp thoại còn tải nhiều dữ liệu; chưa có benchmark tải lớn |
 | Đăng nhập và quyền | Ba role, phiên đăng nhập, đổi mật khẩu, quản trị tài khoản, CSRF, giới hạn thử sai | Chưa có email tự khôi phục, MFA/SSO; chưa có quyền tự phục vụ của Employee |

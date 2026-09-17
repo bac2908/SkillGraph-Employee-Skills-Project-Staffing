@@ -1,3 +1,4 @@
+from app.core.allocation import planning_today
 from app.db.graph import graph_db
 from app.repositories.errors import RepositoryError
 
@@ -27,13 +28,21 @@ ORDER BY candidate.employee_id, skill.name
 """
 
 COLLABORATION_QUERY = """
-MATCH (candidate:Employee)-[:WORKS_ON]->
-      (shared_project:Project)<-[:WORKS_ON]-
-      (member:Employee)-[:WORKS_ON]->
+MATCH (candidate:Employee)-[candidate_assignment:WORKS_ON]->
+      (shared_project:Project)<-[member_assignment:WORKS_ON]-
+      (member:Employee)-[target_assignment:WORKS_ON]->
       (target_project:Project {project_id: $project_id})
 WHERE candidate.employee_id IN $candidate_ids
   AND candidate.employee_id <> member.employee_id
   AND shared_project.project_id <> $project_id
+  AND (target_assignment.start_date IS NULL OR target_assignment.start_date <= $start_date)
+  AND (target_assignment.end_date IS NULL OR target_assignment.end_date >= $end_date)
+  AND (candidate_assignment.start_date IS NULL OR candidate_assignment.start_date <= $today)
+  AND (member_assignment.start_date IS NULL OR member_assignment.start_date <= $today)
+  AND (candidate_assignment.end_date IS NULL OR member_assignment.start_date IS NULL
+       OR member_assignment.start_date <= candidate_assignment.end_date)
+  AND (member_assignment.end_date IS NULL OR candidate_assignment.start_date IS NULL
+       OR candidate_assignment.start_date <= member_assignment.end_date)
 RETURN candidate.employee_id AS employee_id,
        count(DISTINCT member) AS collaboration_count,
        collect(DISTINCT member.name) AS collaborators,
@@ -81,6 +90,8 @@ def get_available_candidate_skills(skill_ids: list[str]) -> list[dict]:
 def get_previous_collaborations(
     project_id: str,
     candidate_ids: list[str],
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> list[dict]:
     if not candidate_ids:
         return []
@@ -91,6 +102,9 @@ def get_previous_collaborations(
                 COLLABORATION_QUERY,
                 project_id=project_id,
                 candidate_ids=candidate_ids,
+                today=planning_today().isoformat(),
+                start_date=start_date or planning_today().isoformat(),
+                end_date=end_date or start_date or planning_today().isoformat(),
             )
             return [record.data() for record in result]
     except Exception as exc:

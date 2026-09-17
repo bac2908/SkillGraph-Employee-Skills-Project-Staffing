@@ -6,6 +6,7 @@ through a Cartesian product. Never fetch every entity or issue a query per proje
 
 from neo4j import Transaction
 
+from app.core.allocation import planning_today
 from app.db.graph import graph_db
 from app.repositories.errors import RepositoryError
 
@@ -33,6 +34,8 @@ RETURN count(skill) AS skill_count
 CAPACITY_QUERY = """
 MATCH (employee:Employee)
 OPTIONAL MATCH (employee)-[assignment:WORKS_ON]->(:Project)
+WHERE (assignment.start_date IS NULL OR assignment.start_date <= $as_of)
+  AND (assignment.end_date IS NULL OR assignment.end_date >= $as_of)
 WITH employee, coalesce(sum(assignment.allocation), 0) AS total_allocation
 RETURN employee.employee_id AS employee_id,
        employee.name AS name,
@@ -74,7 +77,9 @@ def _get_dashboard(transaction: Transaction) -> dict:
 
     capacity = [
         record.data()
-        for record in transaction.run(CAPACITY_QUERY, limit=CAPACITY_LIMIT)
+        for record in transaction.run(
+            CAPACITY_QUERY, limit=CAPACITY_LIMIT, as_of=planning_today().isoformat()
+        )
     ]
     project = transaction.run(DEFAULT_PROJECT_QUERY).single()
     return {

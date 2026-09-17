@@ -35,6 +35,11 @@ Admin phân công A vào Main 40%, vai trò Member; B vào Shared 100%, vai trò
 Developer. Admin cấp Manager quyền ghi Main, **không cấp Shared**. Employee A/B
 không phải tài khoản đăng nhập; không nhầm hai loại dữ liệu.
 
+Cập nhật 17/09: [allocation theo thời gian](allocation-planning.md) đã triển
+khai. Với kịch bản cơ bản này để trống ngày ở bảng phân công để giữ kế hoạch
+không giới hạn; khi dùng gợi ý, kế hoạch mặc định chỉ là hôm nay, cần chọn kỳ
+mong muốn. Không nhầm coverage hôm nay với cam kết xuyên suốt kỳ tương lai.
+
 ## Trình tự demo và kết quả phải thấy
 
 | Thời lượng | Thao tác | Giải thích/kết quả kỳ vọng |
@@ -42,7 +47,7 @@ không phải tài khoản đăng nhập; không nhầm hai loại dữ liệu.
 | 2 phút | Mở dashboard, danh sách nhân viên/dự án | Đây là quản lý năng lực và bố trí nhân sự nội bộ, không phải hệ thống tuyển dụng công khai |
 | 3 phút | Mở Main → Phân tích & gợi ý | Covered: 4/3 → COVERED; Gap: 2/3 → GAP; Missing: 0/3 → MISSING |
 | 1 phút | Đọc tỷ lệ đáp ứng | `round(1/3 × 100, 2) = 33,33%`; không tính trọng số MUST/SHOULD/NICE |
-| 2 phút | Xem gợi ý B rồi bấm Kiểm tra phân bổ | B khớp 2 kỹ năng thiếu, nhưng allocation đã 100%; form không cho thêm việc |
+| 2 phút | Bỏ chọn Chỉ người đủ dung lượng, bấm Áp dụng kế hoạch rồi xem B | B bị ẩn khi bật lọc, hiện khi tắt lọc với còn 0% và chưa đủ dung lượng; bấm Kiểm tra phân bổ vẫn không được lưu |
 | 2 phút | Admin sửa Shared: B từ 100% xuống 80%; thêm B vào Main 20% | B đạt tổng đúng 100%; Main lên 100% coverage |
 | 1 phút | Thử tăng B ở Main lên 21% | Form/BE từ chối vượt 100%; dữ liệu cũ giữ nguyên. Không lách bằng sửa DB |
 | 2 phút | Manager sửa vai trò B ở Main; thử mở Shared | Main được ghi; Shared chỉ đọc. Nhật ký/tài khoản chỉ dành Admin |
@@ -50,9 +55,9 @@ không phải tài khoản đăng nhập; không nhầm hai loại dữ liệu.
 | 2 phút | Admin gỡ B khỏi Main; xem phân tích/Hoạt động | Coverage trở lại 33,33%; nhật ký có actor, thời điểm, trước/sau của phân công |
 | 1 phút | Thử xóa A hoặc kỹ năng Covered khi còn liên kết | HTTP 409 được diễn giải: phải gỡ quan hệ trước; không xóa mất dữ liệu liên quan |
 
-Xếp hạng là **rule-based**, không phải AI/ML. Ưu tiên số kỹ năng thiếu mà ứng
-viên đáp ứng, số người từng cộng tác, tổng cấp độ, rồi ID ổn định theo luật
-hiện tại. AVAILABLE chỉ là trạng thái thủ công; gợi ý chưa lọc allocation.
+Xếp hạng là **rule-based**, không phải AI/ML. Ưu tiên nhóm đủ dung lượng trong
+kỳ trước, sau đó số kỹ năng thiếu đáp ứng, số người từng cộng tác, tổng cấp độ,
+rồi ID. AVAILABLE chỉ là trạng thái thủ công; không thay phép tính allocation.
 Xem [quy tắc và kịch bản graph E2E](graph-e2e-acceptance.md) để kiểm tra thứ tự
 với nhiều ứng viên, request đồng thời và audit đầy đủ.
 

@@ -114,8 +114,8 @@ async function events(api: APIRequestContext, target = 1) {
     resource_id: string;
     resource_type: string;
     action: string;
-    before: { allocation?: number } | null;
-    after: { allocation?: number } | null;
+    before: { allocation?: number; start_date?: string; end_date?: string } | null;
+    after: { allocation?: number; start_date?: string; end_date?: string } | null;
   }[];
 }
 
@@ -240,32 +240,34 @@ test('real FE → FastAPI → graph: business lifecycle, RBAC, audit and allocat
       );
   });
 
-  await test.step('06 Candidate ranking: matches, collaboration, level, ID; exclusions and full capacity', async () => {
+  await test.step('06 Candidate ranking: capacity first, then matches, collaboration, level, ID', async () => {
     const recommendations = await read(page.request, `/api/projects/${project(1)}/recommendations`);
     expect(recommendations.summary).toEqual({ uncovered_skill_count: 2, candidate_count: 4 });
     expect(recommendations.candidates.map((c: { employee_id: string }) => c.employee_id)).toEqual([
-      emp(2),
       emp(3),
       emp(4),
       emp(5),
+      emp(2),
     ]);
     expect(recommendations.candidates.map((c: { rank: number }) => c.rank)).toEqual([1, 2, 3, 4]);
-    expect(recommendations.candidates[0]).toMatchObject({
+    expect(recommendations.candidates[3]).toMatchObject({
       matched_skill_count: 2,
+      can_allocate: false,
+      period_remaining_allocation: 0,
       collaboration_count: 1,
       collaborators: [name('Member')],
       shared_projects: [name('Shared')],
     });
-    expect(recommendations.candidates[1]).toMatchObject({
+    expect(recommendations.candidates[0]).toMatchObject({
       matched_skill_count: 1,
       collaboration_count: 1,
     });
-    expect(recommendations.candidates[2]).toMatchObject({
+    expect(recommendations.candidates[1]).toMatchObject({
       matched_skill_count: 1,
       collaboration_count: 0,
     });
     await expect(page.locator('.candidate-card h3')).toHaveText(
-      ['Both', 'Collaborator', 'Higher', 'Tie'].map(name),
+      ['Collaborator', 'Higher', 'Tie'].map(name),
     );
   });
 
@@ -431,6 +433,52 @@ test('real FE → FastAPI → graph: business lifecycle, RBAC, audit and allocat
           ).status(),
         ).toBe(204);
       }
+    });
+
+    await test.step('10b Dated capacity: disjoint 100%, inclusive conflict, concurrent overlap, explicit cleanup', async () => {
+      const first = `/api/projects/${project(3)}/assignments/${emp(8)}`;
+      const second = `/api/projects/${project(4)}/assignments/${emp(8)}`;
+      const october = {
+        role: 'E2E dated',
+        allocation: 100,
+        start_date: '2080-10-01',
+        end_date: '2080-10-31',
+      };
+      const november = { ...october, start_date: '2080-11-01', end_date: '2080-11-30' };
+      expect((await write(page.request, 'PUT', first, october)).status()).toBe(201);
+      expect((await write(page.request, 'PUT', second, november)).status()).toBe(201);
+      const before = await events(page.request, 4);
+      expect(
+        (
+          await write(page.request, 'PUT', second, { ...november, start_date: '2080-10-31' })
+        ).status(),
+      ).toBe(409);
+      expect(await events(page.request, 4)).toEqual(before);
+      expect(
+        (await read(page.request, `/api/projects/${project(4)}/assignments`)).items[0],
+      ).toMatchObject({ ...november, period_peak_allocation: 100 });
+      expect(
+        before.some(
+          (e) =>
+            e.after?.start_date === november.start_date && e.after?.end_date === november.end_date,
+        ),
+      ).toBe(true);
+      expect((await write(page.request, 'DELETE', first)).status()).toBe(204);
+      expect((await write(page.request, 'DELETE', second)).status()).toBe(204);
+      const responses = await Promise.all([
+        write(page.request, 'PUT', first, { ...october, allocation: 60 }),
+        write(managerContext.request, 'PUT', second, { ...october, allocation: 60 }),
+      ]);
+      expect(responses.map((response) => response.status()).sort()).toEqual([201, 409]);
+      const a = (await read(page.request, `/api/projects/${project(3)}/assignments`)).items;
+      const b = (await read(page.request, `/api/projects/${project(4)}/assignments`)).items;
+      expect(a.length + b.length).toBe(1);
+      expect([...a, ...b][0]).toMatchObject({
+        start_date: '2080-10-01',
+        end_date: '2080-10-31',
+        period_peak_allocation: 60,
+      });
+      expect((await write(page.request, 'DELETE', a.length ? first : second)).status()).toBe(204);
     });
 
     await test.step('11 Update/remove staffing: coverage 100 then 33.33, recommendations refresh', async () => {

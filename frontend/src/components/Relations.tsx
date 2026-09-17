@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { request, save, useAll, useResource } from '../api';
-import type { Assignment, Employee, EmployeeSkill, Items, Requirement, Skill } from '../types';
+import type {
+  Assignment,
+  Candidate,
+  Employee,
+  EmployeeSkill,
+  Items,
+  Requirement,
+  Skill,
+} from '../types';
 import { useCapacity } from '../hooks';
 import {
   AddButton,
@@ -18,16 +26,19 @@ import {
 } from './ui';
 import { options } from '../config';
 import { useAuth } from '../auth';
+import { planningToday } from '../allocation';
 
 export function AssignmentDialog({
   projectId,
   employeeId,
   existing,
+  suggestion,
   onClose,
 }: {
   projectId: string;
   employeeId?: string;
   existing?: Assignment;
+  suggestion?: Candidate;
   onClose: () => void;
 }) {
   const employees = useAll<Employee>('employees');
@@ -36,11 +47,18 @@ export function AssignmentDialog({
   const assignments = useResource<Items<Assignment>>(`/api/projects/${projectId}/assignments`);
   const [chosenId, setChosenId] = useState(existing?.employee_id || employeeId || '');
   const selectedId = existing?.employee_id || employeeId || chosenId;
+  const [startDate, setStartDate] = useState(
+    existing?.start_date || suggestion?.suggested_start_date || '',
+  );
+  const [endDate, setEndDate] = useState(
+    existing?.end_date || suggestion?.suggested_end_date || '',
+  );
   const currentAssignment =
     existing || assignments.data?.items.find((a) => a.employee_id === selectedId);
-  const total = selectedId ? capacity.totals.get(selectedId) || 0 : null;
-  const remaining =
-    total === null ? null : Math.max(0, 100 - total + (currentAssignment?.allocation || 0));
+  const invalidDates = !!(startDate && endDate && endDate < startDate);
+  const remaining = selectedId
+    ? capacity.limitFor(selectedId, projectId, startDate, endDate)
+    : null;
   const error = employees.error || capacity.error || assignments.error;
   // Keep form mounted only after capacity and selector data are available.
   const dataReady = !!employees.data && !!assignments.data && capacity.hasData;
@@ -80,10 +98,24 @@ export function AssignmentDialog({
         )
         .map((e) => ({
           value: e.employee_id,
-          label: `${e.name} · còn ${Math.max(0, 100 - (capacity.totals.get(e.employee_id) || 0) + (currentAssignment?.employee_id === e.employee_id ? currentAssignment.allocation : 0))}%`,
+          label: `${e.name} · tối đa ${capacity.limitFor(e.employee_id, projectId, startDate, endDate)}% trong kỳ`,
         })),
     },
     { name: 'role', label: 'Vai trò trong dự án', maxLength: 100 },
+    {
+      name: 'start_date',
+      label: 'Ngày bắt đầu',
+      type: 'date',
+      required: false,
+      hint: 'Tính cả ngày này. Để trống = không giới hạn bắt đầu.',
+    },
+    {
+      name: 'end_date',
+      label: 'Ngày kết thúc',
+      type: 'date',
+      required: false,
+      hint: 'Tính cả ngày này. Để trống = không giới hạn kết thúc.',
+    },
     {
       name: 'allocation',
       label: 'Phân bổ (%)',
@@ -91,16 +123,18 @@ export function AssignmentDialog({
       min: 1,
       max: remaining ?? 100,
       step: 1,
-      hint: 'Tổng phân bổ trên tất cả dự án không vượt quá 100%.',
+      hint: 'Tổng phân bổ tại bất kỳ ngày nào trong kỳ không vượt quá 100%. Không phải điểm hiệu suất.',
     },
   ];
   return (
     <FormDialog
       title={currentAssignment ? 'Điều chỉnh phân công' : 'Phân công nhân viên'}
       fields={fields}
-      submitDisabled={remaining === 0 || !!error}
+      submitDisabled={remaining === 0 || !!error || invalidDates}
       onFieldChange={(field, value) => {
         if (field === 'employee_id') setChosenId(value);
+        if (field === 'start_date') setStartDate(value);
+        if (field === 'end_date') setEndDate(value);
       }}
       initial={{
         employee_id: selectedId || '',
@@ -110,15 +144,20 @@ export function AssignmentDialog({
           '',
         allocation:
           currentAssignment?.allocation ||
+          suggestion?.suggested_allocation ||
           (remaining && remaining > 0 ? Math.min(20, remaining) : ''),
+        start_date: startDate,
+        end_date: endDate,
       }}
       onClose={onClose}
       onSubmit={async (values) => {
         const targetId = selectedId || String(values.employee_id);
+        const start = String(values.start_date || '');
+        const end = String(values.end_date || '');
+        if (start && end && end < start)
+          throw new Error('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
         const proposed =
-          (capacity.totals.get(targetId) || 0) -
-          (currentAssignment?.allocation || 0) +
-          Number(values.allocation);
+          100 - capacity.limitFor(targetId, projectId, start, end) + Number(values.allocation);
         if (proposed > 100)
           throw new Error(
             `Nhân viên sẽ được phân bổ ${proposed}%. Hãy chọn tỷ lệ thấp hơn hoặc điều chỉnh dự án khác.`,
@@ -128,11 +167,14 @@ export function AssignmentDialog({
             save(`/api/projects/${projectId}/assignments/${targetId}`, 'PUT', {
               role: values.role,
               allocation: values.allocation,
+              start_date: start || null,
+              end_date: end || null,
             }),
           'Đã cập nhật phân công.',
         );
       }}
     >
+      {invalidDates && <p role="alert">Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.</p>}
       {error && (
         <ErrorNotice
           error={error}
@@ -148,15 +190,15 @@ export function AssignmentDialog({
           <strong>{remaining}%</strong>
           <span>
             {currentAssignment
-              ? 'Giới hạn cho dự án này, đã tính phần đang phân bổ tại đây'
-              : 'Dung lượng có thể phân bổ cho dự án này'}
+              ? 'Giới hạn trong kỳ đã chọn; thay thế phân công hiện tại tại đây'
+              : 'Dung lượng tối đa trong toàn bộ kỳ đã chọn'}
           </span>
         </div>
       )}
       <p className="workflow-note">
         {remaining === 0
-          ? 'Nhân viên đã được phân bổ đủ 100%. Cần điều chỉnh phân công ở dự án khác trước khi thêm việc.'
-          : 'Số liệu có thể thay đổi khi người khác phân công. Hệ thống kiểm tra lại tổng allocation khi bạn lưu.'}
+          ? 'Nhân viên đã được phân bổ đủ 100% ở ít nhất một ngày trong kỳ. Hãy đổi thời gian hoặc điều chỉnh phân công khác.'
+          : 'Số liệu có thể thay đổi khi người khác phân công. Backend kiểm tra lại khi lưu. Để trống cả hai ngày = không giới hạn thời gian, kể cả dữ liệu cũ.'}
       </p>
     </FormDialog>
   );
@@ -174,7 +216,7 @@ export function Assignments({ projectId }: { projectId: string }) {
     <section className="panel">
       <SectionHeading
         title="Đội ngũ dự án"
-        detail="Điều phối vai trò và dung lượng làm việc của từng thành viên."
+        detail="Gồm phân công hiện tại, tương lai và đã kết thúc. Kết thúc bằng ngày để giữ lịch sử; gỡ sẽ xóa liên kết."
         action={canEdit && <AddButton onClick={() => setEdit('new')}>Phân công</AddButton>}
       />
       {query.isPending ? (
@@ -194,7 +236,8 @@ export function Assignments({ projectId }: { projectId: string }) {
                 <th>Thành viên</th>
                 <th>Vai trò</th>
                 <th>Dự án này</th>
-                <th>Tổng phân bổ</th>
+                <th>Thời gian (UTC+07)</th>
+                <th>Tổng hôm nay</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
@@ -213,6 +256,18 @@ export function Assignments({ projectId }: { projectId: string }) {
                   <td>{a.role}</td>
                   <td>
                     <strong>{a.allocation}%</strong>
+                  </td>
+                  <td>
+                    <span>
+                      {a.start_date || 'Không giới hạn'} → {a.end_date || 'Không giới hạn'}
+                    </span>
+                    <small>
+                      {a.end_date && a.end_date < planningToday()
+                        ? 'Đã kết thúc'
+                        : a.start_date && a.start_date > planningToday()
+                          ? 'Sắp bắt đầu'
+                          : 'Đang hiệu lực'}
+                    </small>
                   </td>
                   <td>
                     <div className="allocation-cell">

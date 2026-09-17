@@ -6,6 +6,7 @@ from app.api.auth_dependencies import CurrentUser
 from app.core.audit import AuditActor
 from app.schemas.candidate_recommendation import (
     CandidateRecommendationResponse,
+    RecommendationPlan,
 )
 from app.schemas.common import ErrorResponse, Page
 from app.schemas.project import (
@@ -143,5 +144,10 @@ def get_skill_gap(project_id: ProjectPath) -> dict:
         503: {"model": ErrorResponse},
     },
 )
-def get_candidate_recommendations(project_id: ProjectPath) -> dict:
-    return candidate_recommendation_service.recommend(project_id)
+def get_candidate_recommendations(
+    project_id: ProjectPath,
+    plan: Annotated[RecommendationPlan, Query()],
+) -> dict:
+    return candidate_recommendation_service.recommend(
+        project_id, **plan.model_dump(mode="json")
+    )

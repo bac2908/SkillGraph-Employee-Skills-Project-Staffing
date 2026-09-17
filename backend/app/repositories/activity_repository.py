@@ -9,7 +9,14 @@ from app.repositories.errors import RepositoryError
 # Explicit allowlists exclude passwords, email, tokens and unrelated node fields.
 SNAPSHOT_FIELDS = {
     "PROJECT": ("project_id", "name", "description", "status"),
-    "WORKS_ON": ("project_id", "employee_id", "role", "allocation"),
+    "WORKS_ON": (
+        "project_id",
+        "employee_id",
+        "role",
+        "allocation",
+        "start_date",
+        "end_date",
+    ),
     "REQUIRES_SKILL": ("project_id", "skill_id", "min_level", "priority"),
 }
 
@@ -47,7 +54,13 @@ class ActivityRepositoryError(RepositoryError):
 def snapshot(kind: str, value: dict | None) -> dict | None:
     if value is None:
         return None
-    return {key: value[key] for key in SNAPSHOT_FIELDS[kind] if key in value}
+    # Missing dates and explicit null dates mean the same unbounded legacy period.
+    return {
+        key: value[key]
+        for key in SNAPSHOT_FIELDS[kind]
+        if key in value
+        and not (key in {"start_date", "end_date"} and value[key] is None)
+    }
 
 
 def write_event(

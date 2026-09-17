@@ -57,8 +57,8 @@ export function AvailabilityNote() {
   return (
     <p className="workflow-note">
       “Sẵn sàng” là trạng thái do quản trị viên cập nhật, không đồng nghĩa còn dung lượng nhận việc.
-      Phân bổ còn lại = 100% − tổng allocation trên tất cả dự án. Trạng thái không tự đổi khi phân
-      công.
+      Phân bổ còn lại hôm nay (UTC+07) = 100% − tổng allocation đang hiệu lực. Đây không phải điểm
+      hiệu suất. Trạng thái không tự đổi khi phân công.
     </p>
   );
 }
@@ -236,7 +236,7 @@ export function useWrite() {
 export interface Field {
   name: string;
   label: string;
-  type?: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select';
+  type?: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'date';
   options?: { value: string; label: string }[];
   required?: boolean;
   min?: number;
@@ -382,6 +382,7 @@ export function FormDialog({
                   maxLength={f.maxLength}
                   rows={3}
                   defaultValue={String(initial[f.name] ?? '')}
+                  onChange={(event) => onFieldChange?.(f.name, event.target.value)}
                 />
               ) : (
                 <input
@@ -397,6 +398,7 @@ export function FormDialog({
                   minLength={f.minLength}
                   autoComplete={f.autoComplete}
                   defaultValue={String(initial[f.name] ?? '')}
+                  onChange={(event) => onFieldChange?.(f.name, event.target.value)}
                 />
               )}
               {f.hint && <small>{f.hint}</small>}

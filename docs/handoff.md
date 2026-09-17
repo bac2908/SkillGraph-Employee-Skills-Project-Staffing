@@ -4,6 +4,11 @@ Ngày chốt hồ sơ: **16/09/2026**, múi giờ Asia/Saigon (UTC+7).
 Đây là **ứng viên bàn giao chạy cục bộ**, không phải tuyên bố sẵn sàng production.
 Không tạo Git tag, commit hoặc push tự động trong đợt bàn giao.
 
+Cập nhật sau mốc bàn giao: [allocation theo thời gian — 17/09](allocation-planning.md)
+thay đổi BE/FE, hợp đồng API và quy tắc gợi ý. ZIP/manifest 16/09 không chứa
+nâng cấp này; nếu bàn giao mã mới cần xuất và kiểm chứng một gói mới, không
+gắn kết quả/fingerprint cũ cho worktree hiện tại.
+
 ## 1. Người nhận cần đọc gì?
 
 1. [Tổng quan dự án](tong-quan-du-an.md): giải quyết bài toán gì, dành cho ai,

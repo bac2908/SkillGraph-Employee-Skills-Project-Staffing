@@ -167,7 +167,11 @@ def test_repository_fixed_five_queries_one_read_transaction(
     no_real_graph.assert_called_once_with()
     session.execute_read.assert_called_once_with(repository._get_dashboard)
     assert transaction.run.call_count == 5
-    transaction.run.assert_any_call(repository.CAPACITY_QUERY, limit=5)
+    transaction.run.assert_any_call(
+        repository.CAPACITY_QUERY,
+        limit=5,
+        as_of=repository.planning_today().isoformat(),
+    )
     assert "LIMIT $limit" in repository.CAPACITY_QUERY
     assert "LIMIT 1" in repository.DEFAULT_PROJECT_QUERY
     session.execute_write.assert_not_called()

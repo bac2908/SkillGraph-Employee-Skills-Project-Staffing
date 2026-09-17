@@ -100,17 +100,18 @@ ghi được mọi thay đổi do người dùng chạy Cypher trực tiếp; ph
 
 ### Phân công theo thời gian
 
-Thêm ngày bắt đầu/kết thúc và chỉ cộng allocation trong khoảng thời gian giao
-nhau. Phải định nghĩa dự án kết thúc, nghỉ phép, lịch toàn thời gian/bán thời gian
-và cách xử lý dữ liệu cũ. Đây là thay đổi mô hình nghiệp vụ, không chỉ thêm hai ô
-ngày trên FE. Cần kiểm thử giao nhau ở ranh giới ngày và phân công đồng thời.
+Đã triển khai 17/09: ngày bắt đầu/kết thúc, kiểm tra tải cao nhất trong kỳ,
+tổng hôm nay và dữ liệu legacy không giới hạn; xem [tài liệu và kết quả](allocation-planning.md).
+Chưa nghiệm thu đồng thời trên graph thật. Bước sau mới là lịch cá nhân,
+nghỉ phép/part-time và nhiều đợt trên cùng cặp nhân viên–dự án; cần chốt mẫu số
+dung lượng trước khi xây. Không dùng allocation làm điểm đánh giá nhân viên.
 
 ### Giải thích đề xuất ứng viên
 
-Hiển thị vì sao ứng viên được xếp hạng: kỹ năng nào lấp khoảng trống, cấp độ yêu
-cầu/thực tế, quan hệ làm chung và dung lượng còn lại. Cho quản lý xem tác động
-dự kiến lên coverage trước khi lưu. Giữ rõ đây là dự đoán; server phải kiểm tra
-lại khi ghi. Hệ thống hiện tại là rule-based, chưa phải mô hình ML.
+Đã có kỹ năng khớp, cấp độ, cộng tác và dung lượng theo kỳ; đủ dung lượng được
+ưu tiên trước và có bộ lọc. Chưa có mô phỏng coverage từng mốc thay đội hay kỹ
+năng có bằng chứng xác nhận. Giữ rõ đây là tham khảo, không giữ chỗ; server
+kiểm tra lại khi ghi. Hệ thống hiện tại là rule-based, chưa phải mô hình ML.
 
 ## Triển khai và tiết kiệm dung lượng
 

@@ -141,7 +141,8 @@ test('picker empty result, failure and retry do not reset the selected project',
 test('empty overview shows real zeros and does not fetch analysis', async ({ page }) => {
   const analysis: string[] = [];
   page.on('request', (request) => {
-    if (/\/(skill-gap|recommendations)$/.test(request.url())) analysis.push(request.url());
+    if (/\/(skill-gap|recommendations)$/.test(new URL(request.url()).pathname))
+      analysis.push(request.url());
   });
   await page.route('**/api/dashboard', (route) =>
     route.fulfill({

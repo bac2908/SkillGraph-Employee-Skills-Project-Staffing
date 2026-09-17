@@ -1,4 +1,5 @@
-from app.repositories import candidate_repository
+from app.core.allocation import peak_allocation, planning_today
+from app.repositories import candidate_repository, project_assignment_repository
 from app.services.skill_gap_service import SkillGapService
 
 
@@ -6,8 +7,27 @@ class CandidateRecommendationService:
     def __init__(self) -> None:
         self.skill_gap_service = SkillGapService()
 
-    def recommend(self, project_id: str) -> dict:
-        skill_gap_result = self.skill_gap_service.analyze(project_id)
+    def recommend(
+        self,
+        project_id: str,
+        *,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        required_allocation: int = 1,
+        capacity_only: bool = False,
+    ) -> dict:
+        start_date = start_date or planning_today().isoformat()
+        end_date = end_date or start_date
+        plan = dict(
+            start_date=start_date,
+            end_date=end_date,
+            required_allocation=required_allocation,
+            capacity_only=capacity_only,
+        )
+        # Conservative coverage: members must cover this entire requested period.
+        skill_gap_result = self.skill_gap_service.analyze(
+            project_id, start_date, end_date
+        )
         uncovered_skills = [
             skill
             for skill in skill_gap_result["skills"]
@@ -15,19 +35,12 @@ class CandidateRecommendationService:
         ]
 
         if not uncovered_skills:
-            return self._empty_result(project_id)
+            return {**self._empty_result(project_id), **plan}
 
-        uncovered_skill_map = {
-            skill["skill_id"]: skill
-            for skill in uncovered_skills
-        }
-        current_member_ids = candidate_repository.get_project_member_ids(
-            project_id
-        )
-        candidate_skill_rows = (
-            candidate_repository.get_available_candidate_skills(
-                list(uncovered_skill_map)
-            )
+        uncovered_skill_map = {skill["skill_id"]: skill for skill in uncovered_skills}
+        current_member_ids = candidate_repository.get_project_member_ids(project_id)
+        candidate_skill_rows = candidate_repository.get_available_candidate_skills(
+            list(uncovered_skill_map)
         )
 
         candidates = self._build_eligible_candidates(
@@ -35,10 +48,25 @@ class CandidateRecommendationService:
             uncovered_skill_map,
             current_member_ids,
         )
-        self._attach_collaboration_data(project_id, candidates)
+        self._attach_collaboration_data(project_id, candidates, start_date, end_date)
+        loads = project_assignment_repository.get_employee_allocations(list(candidates))
+        for candidate in candidates.values():
+            peak = peak_allocation(
+                loads[candidate["employee_id"]], start_date, end_date
+            )
+            candidate.update(
+                period_peak_allocation=peak,
+                period_remaining_allocation=100 - peak,
+                can_allocate=peak + required_allocation <= 100,
+            )
+        if capacity_only:
+            candidates = {
+                key: value for key, value in candidates.items() if value["can_allocate"]
+            }
         ranked_candidates = self._rank_candidates(candidates)
 
         return {
+            **plan,
             "project_id": project_id,
             "summary": {
                 "uncovered_skill_count": len(uncovered_skills),
@@ -106,12 +134,8 @@ class CandidateRecommendationService:
             )
 
         for candidate in candidates.values():
-            candidate["matched_skills"].sort(
-                key=lambda skill: skill["skill"]
-            )
-            candidate["matched_skill_count"] = len(
-                candidate["matched_skills"]
-            )
+            candidate["matched_skills"].sort(key=lambda skill: skill["skill"])
+            candidate["matched_skill_count"] = len(candidate["matched_skills"])
 
         return candidates
 
@@ -119,10 +143,14 @@ class CandidateRecommendationService:
     def _attach_collaboration_data(
         project_id: str,
         candidates: dict[str, dict],
+        start_date: str,
+        end_date: str,
     ) -> None:
         collaboration_rows = candidate_repository.get_previous_collaborations(
             project_id,
             list(candidates),
+            start_date,
+            end_date,
         )
 
         for row in collaboration_rows:
@@ -136,12 +164,10 @@ class CandidateRecommendationService:
         ranked_candidates = sorted(
             candidates.values(),
             key=lambda candidate: (
+                not candidate["can_allocate"],
                 -candidate["matched_skill_count"],
                 -candidate["collaboration_count"],
-                -sum(
-                    skill["level"]
-                    for skill in candidate["matched_skills"]
-                ),
+                -sum(skill["level"] for skill in candidate["matched_skills"]),
                 candidate["employee_id"],
             ),
         )

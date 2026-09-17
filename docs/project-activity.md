@@ -11,7 +11,7 @@ sang giá trị gì. Dữ liệu lấy từ API thật, không sinh lịch sử 
 | Tài nguyên | Sự kiện | Trường được lưu trước/sau |
 | --- | --- | --- |
 | Project | Tạo, cập nhật, xóa | project_id, name, description, status |
-| WORKS_ON | Gán, cập nhật, gỡ phân công | project_id, employee_id, role, allocation |
+| WORKS_ON | Gán, cập nhật, gỡ phân công | project_id, employee_id, role, allocation, start_date, end_date |
 | REQUIRES_SKILL | Thêm, cập nhật, gỡ yêu cầu | project_id, skill_id, min_level, priority |
 
 PUT/PATCH không thay đổi các trường trên không tạo sự kiện mới. Yêu cầu bị từ
@@ -75,6 +75,10 @@ Khóa Employee dùng chung cho upsert/delete WORKS_ON; kiểm tra allocation v�
 nằm trong transaction. Project được khóa khi sửa/xóa thông tin và thay đổi yêu
 cầu kỹ năng. Snapshot lấy sau khi khóa. Hai phép thử đồng thời không thay cho
 stress test dài hạn hoặc chứng minh mọi interleaving.
+
+Cập nhật 17/09: [phân bổ theo thời gian](allocation-planning.md) đọc các phân
+công sau khi lấy khóa, kiểm tra tải cao nhất trong kỳ và lưu ngày vào audit.
+Ngày thiếu và null cùng nghĩa không giới hạn nên không tạo audit no-op giả.
 
 AuditEvent không có quan hệ nối tới Project/Employee/Skill. Xóa dự án không xóa
 nhật ký, cũng không bị node audit cản trở. Nếu tái sử dụng cùng `project_id`,

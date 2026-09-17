@@ -2876,3 +2876,56 @@ main.auth-main {
     gap: 10px;
   }
 }
+.recommendation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 0 24px 16px;
+}
+.recommendation-filters label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.recommendation-filters input:not([type='checkbox']) {
+  min-width: 0;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+}
+.recommendation-filters .capacity-filter {
+  display: flex;
+  align-items: center;
+  align-self: center;
+}
+.recommendation-filters input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+.recommendations > .workflow-note,
+.recommendation-explainer {
+  margin: 0 24px 16px;
+}
+.recommendation-explainer {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.recommendation-explainer summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+@media (max-width: 480px) {
+  .recommendation-filters > label:not(.capacity-filter) {
+    width: 100%;
+  }
+}

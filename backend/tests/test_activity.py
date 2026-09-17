@@ -190,7 +190,7 @@ def test_write_actor_comes_from_authenticated_session(
     user = authenticated_client.get("/api/auth/me").json()["user"]
     seen = []
 
-    def capture(*args, actor):
+    def capture(*args, actor, **kwargs):
         seen.append(actor)
         raise ResourceNotFoundError("Test sentinel", "no graph")
 
@@ -264,7 +264,10 @@ def test_noop_does_not_add_history_and_missing_write_fails():
 
 def result(data):
     value = MagicMock()
-    value.single.return_value = Record(data) if data is not None else None
+    value.__iter__.side_effect = lambda: iter(
+        [Record(row) for row in data] if isinstance(data, list) else []
+    )
+    value.single.return_value = Record(data) if isinstance(data, dict) else None
     return value
 
 
@@ -294,7 +297,8 @@ def result(data):
             assignments._upsert_project_assignment,
             ("PROJ001", "EMP001", "Engineer", 40),
             [
-                {"allocated_elsewhere": 0},
+                {"employee_id": "EMP001"},
+                [],
                 None,
                 {
                     "project_id": "PROJ001",
@@ -345,7 +349,10 @@ def test_all_callbacks_propagate_audit_failure_in_business_transaction(
 
 def test_allocation_conflict_never_writes_history(monkeypatch):
     transaction = MagicMock()
-    transaction.run.return_value = result({"allocated_elsewhere": 80})
+    transaction.run.side_effect = [
+        result({"employee_id": "EMP001"}),
+        result([{"assignment": {"allocation": 80}}]),
+    ]
     writer = MagicMock()
     monkeypatch.setattr(assignments, "write_event", writer)
     response = assignments._upsert_project_assignment(
@@ -358,7 +365,7 @@ def test_allocation_conflict_never_writes_history(monkeypatch):
     )
     assert response.allocation_exceeded
     writer.assert_not_called()
-    assert transaction.run.call_count == 1
+    assert transaction.run.call_count == 2
 
 
 def test_retry_reuses_context_without_global_actor_state(block_graph, monkeypatch):

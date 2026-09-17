@@ -38,14 +38,16 @@ Windows chứa dấu `&`. Không cần đổi tên thư mục dự án.
 - Dự án: tạo/sửa/xóa; trang chi tiết gồm phân tích, đội ngũ và yêu cầu kỹ năng.
 - Hoạt động (Admin): trang lịch sử chung và tab trong chi tiết dự án, lọc/phân
   trang và xem giá trị trước/sau. Xem [nhật ký dự án](project-activity.md).
-- Phân công: xem dung lượng còn lại, đặt vai trò và allocation, chỉnh sửa hoặc gỡ
+- Phân công: xem dung lượng còn lại, đặt vai trò, allocation và ngày bắt đầu/kết thúc, chỉnh sửa hoặc gỡ
   phân công. Lỗi vượt giới hạn từ server được hiển thị trong biểu mẫu, giữ lại dữ
   liệu đã nhập để sửa và thử lại.
 
 Các nút xóa/gỡ đều mở hộp thoại xác nhận. Không tự thay đổi trạng thái nhân viên
 khi phân công: trạng thái `AVAILABLE` và allocation là hai thuộc tính nghiệp vụ
 khác nhau theo API hiện tại. Candidate Recommendation gợi ý theo kỹ năng và lịch
-sử cộng tác; vẫn phải kiểm tra dung lượng khi thực hiện phân công.
+sử cộng tác, có bộ lọc ngày/tỷ lệ/dung lượng; vẫn kiểm tra lại khi lưu. Xem
+[phân bổ theo thời gian](allocation-planning.md) cho quy tắc mới từ 17/09,
+sự khác nhau giữa tải hôm nay và tải cao nhất trong kỳ, cũng như giới hạn.
 
 Đợt [rà soát giao diện bước 5](usability-review.md) bổ sung lời giải thích ngay
 trên màn hình, phân biệt hết phiên với lỗi kết nối, giữ ô nhập khi lưu thất

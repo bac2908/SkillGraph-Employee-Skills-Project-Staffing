@@ -343,8 +343,8 @@ test('mobile candidate may be AVAILABLE but fully allocated: explain it and bloc
     }),
   );
   await page.goto('/');
-  await expect(page.locator('.recommendations .workflow-note')).toContainText(
-    'Gợi ý chưa lọc theo allocation còn lại',
+  await expect(page.locator('.recommendations > .workflow-note')).toContainText(
+    'Gợi ý có xét dung lượng',
   );
   await page.getByRole('button', { name: 'Kiểm tra phân bổ' }).first().click();
   const dialog = page.getByRole('dialog');

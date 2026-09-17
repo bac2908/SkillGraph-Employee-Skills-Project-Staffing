@@ -8,6 +8,7 @@ export default defineConfig({
     'dashboard.spec.ts',
     'activity.spec.ts',
     'usability.spec.ts',
+    'allocation.spec.ts',
   ],
   fullyParallel: true,
   workers: 2,

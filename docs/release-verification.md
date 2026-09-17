@@ -1,5 +1,9 @@
 # Báo cáo chốt bản bàn giao local — 16/09/2026
 
+Báo cáo này chỉ áp dụng cho gói tại mốc 16/09. Sau đó có nâng cấp
+[allocation theo thời gian ngày 17/09](allocation-planning.md), kèm kết quả
+kiểm thử riêng. Không coi ZIP/manifest hoặc số liệu dưới đây là bản mới nhất.
+
 ## Nhận diện và phạm vi
 
 - Phiên bản khai báo BE/FE: **0.1.0**, ứng viên bàn giao cục bộ; chưa gắn Git tag.

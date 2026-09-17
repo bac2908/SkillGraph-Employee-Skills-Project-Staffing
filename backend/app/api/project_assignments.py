@@ -71,6 +71,8 @@ def upsert_project_assignment(
         payload.role,
         payload.allocation,
         actor=AuditActor.from_user(user),
+        start_date=payload.start_date.isoformat() if payload.start_date else None,
+        end_date=payload.end_date.isoformat() if payload.end_date else None,
     )
     if created:
         response.status_code = status.HTTP_201_CREATED

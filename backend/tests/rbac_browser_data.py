@@ -144,8 +144,12 @@ def install_rbac_data(store):
         },
         "skills": [],
     }
-    projects.candidate_recommendation_service.recommend = lambda pid: {
+    projects.candidate_recommendation_service.recommend = lambda pid, **kwargs: {
         "project_id": pid,
+        "start_date": kwargs.get("start_date") or "2026-09-17",
+        "end_date": kwargs.get("end_date") or "2026-09-17",
+        "required_allocation": kwargs.get("required_allocation", 1),
+        "capacity_only": kwargs.get("capacity_only", False),
         "summary": {"uncovered_skill_count": 0, "candidate_count": 0},
         "uncovered_skills": [],
         "candidates": [],

@@ -157,6 +157,7 @@ export function ProjectDetail() {
         <AssignmentDialog
           projectId={project.project_id}
           employeeId={candidate.employee_id}
+          suggestion={candidate}
           onClose={() => setCandidate(null)}
         />
       )}

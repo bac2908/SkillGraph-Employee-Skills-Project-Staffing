@@ -1,8 +1,10 @@
 import { ArrowUpRight, CheckCheck, CircleDot, Sparkles, Users } from 'lucide-react';
+import { useId, useState } from 'react';
 import { useResource } from '../api';
 import type { Candidate, Gap, Recommendations } from '../types';
 import { Avatar, Badge, Empty, ErrorNotice, Loading, SectionHeading } from './ui';
 import { useAuth } from '../auth';
+import { planningToday } from '../allocation';
 
 export function SkillCoverage({ projectId }: { projectId: string }) {
   const query = useResource<Gap>(`/api/projects/${projectId}/skill-gap`);
@@ -24,7 +26,7 @@ export function SkillCoverage({ projectId }: { projectId: string }) {
           <span>%</span>
         </div>
         <div>
-          <strong>Kỹ năng được đáp ứng</strong>
+          <strong>Kỹ năng được đáp ứng hôm nay (UTC+07)</strong>
           <p>
             {gap.summary.covered} / {gap.summary.total} kỹ năng đạt yêu cầu
           </p>
@@ -87,13 +89,23 @@ export function CandidateSuggestions({
   onAssign: (candidate: Candidate) => void;
   compact?: boolean;
 }) {
-  const query = useResource<Recommendations>(`/api/projects/${projectId}/recommendations`);
+  const [plan, setPlan] = useState({
+    start_date: planningToday(),
+    end_date: planningToday(),
+    required_allocation: '20',
+    capacity_only: 'true',
+  });
+  const [planError, setPlanError] = useState('');
+  const filterId = useId();
+  const query = useResource<Recommendations>(
+    `/api/projects/${projectId}/recommendations?${new URLSearchParams(plan)}`,
+  );
   const { canManageProject } = useAuth();
   return (
     <section className="panel recommendations">
       <SectionHeading
         title="Những mảnh ghép phù hợp"
-        detail="Xếp hạng tham khảo theo kỹ năng còn thiếu và cộng tác."
+        detail="Đủ dung lượng trước, rồi kỹ năng còn thiếu, cộng tác và cấp độ. Không phải xếp hạng hiệu suất nhân viên."
         action={
           <span className="subtle-label">
             <Sparkles size={16} />
@@ -101,10 +113,81 @@ export function CandidateSuggestions({
           </span>
         }
       />
+      <form
+        className="recommendation-filters"
+        aria-label="Kế hoạch phân công"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const start = String(data.get('start_date'));
+          const end = String(data.get('end_date'));
+          if (end < start) {
+            setPlanError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
+            return;
+          }
+          setPlanError('');
+          setPlan({
+            start_date: start,
+            end_date: end,
+            required_allocation: String(data.get('required_allocation')),
+            capacity_only: data.has('capacity_only') ? 'true' : 'false',
+          });
+        }}
+      >
+        <label htmlFor={`${filterId}-start`}>
+          Từ ngày
+          <input
+            id={`${filterId}-start`}
+            name="start_date"
+            type="date"
+            required
+            defaultValue={plan.start_date}
+          />
+        </label>
+        <label htmlFor={`${filterId}-end`}>
+          Đến ngày
+          <input
+            id={`${filterId}-end`}
+            name="end_date"
+            type="date"
+            required
+            defaultValue={plan.end_date}
+          />
+        </label>
+        <label htmlFor={`${filterId}-load`}>
+          Cần phân bổ (%)
+          <input
+            id={`${filterId}-load`}
+            name="required_allocation"
+            type="number"
+            required
+            min="1"
+            max="100"
+            step="1"
+            defaultValue="20"
+          />
+        </label>
+        <label className="capacity-filter">
+          <input name="capacity_only" type="checkbox" defaultChecked />
+          Chỉ người đủ dung lượng
+        </label>
+        <button className="button secondary" type="submit">
+          Áp dụng kế hoạch
+        </button>
+      </form>
+      {planError && <p role="alert">{planError}</p>}
       <p className="workflow-note">
-        Gợi ý chưa lọc theo allocation còn lại. Được gợi ý không có nghĩa chắc chắn nhận thêm việc;
-        hãy kiểm tra phân bổ và xác nhận với người quản lý trước khi giao việc.
+        Kế hoạch đang áp dụng: {plan.start_date} → {plan.end_date}, cần {plan.required_allocation}%
+        mỗi ngày (UTC+07). Gợi ý có xét dung lượng trong toàn bộ kỳ; số liệu không giữ chỗ.
       </p>
+      <details className="recommendation-explainer">
+        <summary>Cách đọc gợi ý và giới hạn</summary>
+        <p>
+          Kỹ năng của đội chỉ tính người được phân công xuyên suốt kỳ nên kết quả có thể thận trọng
+          hơn từng ngày. Được gợi ý không có nghĩa chắc chắn nhận thêm việc; hãy xác nhận với người
+          quản lý. Bản ghi đã gắn dự án được điều chỉnh tại tab Phân công.
+        </p>
+      </details>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -118,7 +201,7 @@ export function CandidateSuggestions({
           }
           detail={
             query.data.summary.uncovered_skill_count
-              ? 'Cập nhật năng lực hoặc trạng thái sẵn sàng của nhân viên để tìm thêm lựa chọn.'
+              ? 'Thử điều chỉnh kỳ, tỷ lệ cần phân bổ hoặc bỏ lọc dung lượng. Kiểm tra năng lực và trạng thái sẵn sàng.'
               : 'Bạn có thể tiếp tục quản lý yêu cầu và phân công tại dự án.'
           }
         />
@@ -133,6 +216,13 @@ export function CandidateSuggestions({
               <h3>{candidate.name}</h3>
               <p>
                 {candidate.title} · {candidate.seniority}
+              </p>
+              <p className="workflow-note">
+                Còn tối thiểu {candidate.period_remaining_allocation}% trong kỳ ·{' '}
+                {candidate.can_allocate
+                  ? 'Đủ dung lượng theo kế hoạch'
+                  : 'Chưa đủ dung lượng theo kế hoạch'}
+                .
               </p>
               <div className="chips">
                 {candidate.matched_skills.map((skill) => (
@@ -150,7 +240,18 @@ export function CandidateSuggestions({
                 </span>
               </div>
               {canManageProject(projectId) ? (
-                <button className="button secondary" onClick={() => onAssign(candidate)}>
+                <button
+                  className="button secondary"
+                  onClick={() =>
+                    onAssign({
+                      ...candidate,
+                      suggested_start_date: query.data.start_date || plan.start_date,
+                      suggested_end_date: query.data.end_date || plan.end_date,
+                      suggested_allocation:
+                        query.data.required_allocation || Number(plan.required_allocation),
+                    })
+                  }
+                >
                   Kiểm tra phân bổ
                   <ArrowUpRight size={16} />
                 </button>

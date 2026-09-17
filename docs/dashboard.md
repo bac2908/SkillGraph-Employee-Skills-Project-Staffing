@@ -29,8 +29,10 @@ Sắp xếp theo allocation tăng dần, tên không phân biệt hoa thường,
 Nhân viên chưa có phân công được tính 0%. Không lọc theo trạng thái nhân viên:
 allocation thấp không tự có nghĩa là người đó sẵn sàng nhận việc.
 
-Tổng allocation gồm mọi `WORKS_ON` tới Project, kể cả dự án đã kết thúc, theo quy
-tắc hiện hữu. Chưa xét lịch/ngày. Nếu dữ liệu cũ hoặc ghi DB trực tiếp vượt 100%,
+Cập nhật 17/09: tổng allocation chỉ gồm `WORKS_ON` đang hiệu lực hôm nay
+(UTC+07); ngày thiếu coi là không giới hạn. Trạng thái Project không tự giải
+phóng dung lượng; cần đặt ngày kết thúc. Xem [quy tắc thời gian](allocation-planning.md).
+Nếu dữ liệu cũ hoặc ghi DB trực tiếp vượt 100%,
 API vẫn trả tổng thật và dung lượng âm, không âm thầm làm tròn thành 100%.
 
 Database rỗng: HTTP 200, các tổng bằng 0, capacity rỗng, default_project null.

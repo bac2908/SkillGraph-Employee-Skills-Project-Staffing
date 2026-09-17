@@ -189,7 +189,7 @@ export function Dashboard() {
         <section className="panel capacity-panel">
           <SectionHeading
             title="Nhịp làm việc của đội ngũ"
-            detail="Tối đa 5 người có mức phân bổ thấp nhất. Số % là phần đã phân bổ trên tất cả dự án, không phải phần còn trống."
+            detail="Tối đa 5 người có mức phân bổ thấp nhất hôm nay (UTC+07). Số % là phần đã phân bổ đang hiệu lực, không phải phần còn trống hay điểm hiệu suất."
           />
           {overview.isPending ? (
             <Loading />
@@ -250,6 +250,7 @@ export function Dashboard() {
         <AssignmentDialog
           projectId={selectedProject.project_id}
           employeeId={candidate.employee_id}
+          suggestion={candidate}
           onClose={() => setCandidate(null)}
         />
       )}

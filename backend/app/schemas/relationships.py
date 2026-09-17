@@ -1,6 +1,7 @@
+from datetime import date
 from typing import Annotated
 
-from pydantic import Field, StringConstraints
+from pydantic import Field, StringConstraints, model_validator
 
 from app.schemas.common import APIModel
 from app.schemas.employee import EmployeeId
@@ -41,6 +42,18 @@ class ProjectAssignmentWrite(APIModel):
         description="Percentage of the employee's capacity assigned here.",
         examples=[80],
     )
+    start_date: date | None = Field(
+        default=None, description="Inclusive; null = no lower bound."
+    )
+    end_date: date | None = Field(
+        default=None, description="Inclusive; null = no upper bound."
+    )
+
+    @model_validator(mode="after")
+    def ordered_dates(self):
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date.")
+        return self
 
 
 class ProjectAssignmentRead(ProjectAssignmentWrite):
@@ -48,8 +61,15 @@ class ProjectAssignmentRead(ProjectAssignmentWrite):
     project_name: str
     employee_id: EmployeeId
     employee_name: str
-    employee_total_allocation: int
-    employee_remaining_allocation: int
+    employee_total_allocation: int = Field(
+        description="Active allocation today in the UTC+07 business calendar."
+    )
+    employee_remaining_allocation: int = Field(
+        description="100 minus today's active allocation; can be negative for invalid legacy data."
+    )
+    allocation_as_of: date | None = None
+    period_peak_allocation: int | None = None
+    period_remaining_allocation: int | None = None
 
 
 class ProjectAssignmentList(APIModel):

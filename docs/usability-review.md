@@ -85,6 +85,11 @@ thế kiểm soát giao dịch/allocation tại database.
 
 ### 4. Giải thích trạng thái, allocation và gợi ý
 
+Phần dưới ghi hành vi tại nghiệm thu bước 5. Bản 17/09 đã thay phần tính tổng
+và gợi ý bằng [phân bổ theo thời gian](allocation-planning.md): hôm nay chỉ
+tính quan hệ đang hiệu lực, form xét kỳ chọn, gợi ý có lọc đủ dung lượng.
+Các nguyên tắc không đồng nhất trạng thái/hiệu suất và kiểm tra lại khi lưu vẫn giữ.
+
 - `AVAILABLE` / “Sẵn sàng” là trạng thái hồ sơ do **Admin** cập nhật theo quyền
   hiện tại. Phân công không tự đổi trạng thái này.
 - Allocation còn lại = `100% − tổng allocation trên tất cả dự án` theo mô

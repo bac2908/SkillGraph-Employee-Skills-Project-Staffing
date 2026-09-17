@@ -1,6 +1,8 @@
 # Kiểm thử FE → BE → graph thật từ đầu đến cuối
 
-Ngày cập nhật: **14/09/2026**.
+Ngày cập nhật: **17/09/2026**. Bổ sung bước 10b và thứ tự capacity-first theo
+[allocation theo thời gian](allocation-planning.md). Các báo cáo cũ bên dưới
+thuộc đợt chuẩn bị ban đầu; chưa có kết quả chạy graph thật của bản mới.
 
 **Trạng thái: đã chuẩn bị bộ test và kiểm tra an toàn ngoại tuyến; chưa chạy
 nghiệm thu graph thật, chưa đánh dấu bước 4 đạt.** Đích test chưa được cấu hình
@@ -16,7 +18,7 @@ Không mock HTTP, auth hoặc service trong bộ test này. Không chạy trên 
 
 Phạm vi đã viết:
 
-- Một kịch bản Playwright gồm **13 bước** theo thứ tự, chạy bằng Microsoft Edge
+- Một kịch bản Playwright gồm **13 bước chính và bước 10b** theo thứ tự, chạy bằng Microsoft Edge
   headless. Tạo dữ liệu nghiệp vụ qua giao diện, không seed bằng Cypher.
 - Tài khoản Admin/Manager/Viewer tổng hợp trong SQLite riêng từng lần thử;
   xác thực, CSRF và kiểm soát quyền đều dùng implementation thật.
@@ -28,8 +30,8 @@ Phạm vi đã viết:
 - Quy trình giữ bằng chứng và cleanup riêng, có xác nhận; không dọn dữ liệu tự
   động trong `finally` khi test lỗi.
 
-Không sửa chính sách quyền, công thức gợi ý hoặc logic transaction của ứng dụng
-trong đợt chuẩn bị này. Công cụ/test không phải chức năng production mới.
+Đợt chuẩn bị ban đầu không sửa nghiệp vụ. Bản cập nhật allocation 17/09 đã thay
+đổi kiểm tra theo kỳ và gợi ý; test được cập nhật tương ứng, chưa chạy engine thật.
 
 ## 2. Đích test, secrets và các chốt an toàn
 
@@ -96,16 +98,17 @@ phải lên 100%; gỡ Both khỏi Main phải trở về 33,33%.
 
 Thứ tự gợi ý kỳ vọng:
 
-1. Both: đáp ứng hai kỹ năng còn thiếu, đã làm cùng Member ở Shared.
-2. Collaborator: đáp ứng một kỹ năng cấp 3, đã làm cùng Member.
-3. Higher: một kỹ năng cấp 5, chưa cộng tác; đứng sau Collaborator theo luật
+1. Collaborator: đủ dung lượng, đáp ứng một kỹ năng cấp 3, đã làm cùng Member.
+2. Higher: đủ dung lượng, một kỹ năng cấp 5, chưa cộng tác; đứng sau Collaborator theo luật
    ưu tiên số cộng tác trước tổng cấp độ.
-4. Tie: giống Higher nhưng ID lớn hơn, nên xếp sau.
+3. Tie: giống Higher nhưng ID lớn hơn, nên xếp sau.
+4. Both: đáp ứng hai kỹ năng còn thiếu, đã làm cùng Member ở Shared nhưng đang
+   100% allocation; API không lọc vẫn trả ở cuối với `can_allocate=false`.
 
 Member bị loại vì đang ở Main; Unavailable không ở trạng thái AVAILABLE; Low
 chưa đạt cấp yêu cầu; Race không có kỹ năng phù hợp. Both ban đầu có 100%
-allocation ở Shared nhưng vẫn được gợi ý: **đây là quy tắc hiện tại, gợi ý chưa
-lọc dung lượng**. Test giảm Shared xuống 80% trước khi thêm 20% vào Main.
+allocation ở Shared: FE mặc định lọc đủ 20% nên chỉ hiện 3 ứng viên đầu.
+Test giảm Shared xuống 80% trước khi thêm 20% vào Main.
 
 ## 4. Các bước trong kịch bản và bằng chứng yêu cầu
 
@@ -121,6 +124,7 @@ lọc dung lượng**. Test giảm Shared xuống 80% trước khi thêm 20% và
 | 08 | Giữ biểu mẫu phân công đang mở, request khác tăng allocation ở Shared; gửi biểu mẫu cũ phải nhận 409 thật, UI giữ giá trị và hiển thị lỗi 100%; không thêm audit giả |
 | 09 | Phân công Member 70% ở Main + 30% ở Shared = 100% thành công; thêm 1% ở Race A bị 409, không đổi graph/audit |
 | 10 | Hai HTTP request từ hai context/session độc lập cùng phân công Race 60% vào hai dự án, lặp ba vòng; mỗi vòng một 201 và một 409, chỉ một quan hệ/audit mới với đúng actor |
+| 10b | 100% tháng 10/2080 và 100% tháng 11/2080 hợp lệ; sửa giao nhau ngày 31/10 bị 409, ngày/audit giữ nguyên; hai yêu cầu 60% cùng kỳ một thành công, một 409; gỡ đúng các quan hệ test |
 | 11 | Sửa allocation Both, thêm vào Main rồi gỡ bằng UI; coverage và gợi ý cập nhật 100% → 33,33% |
 | 12 | Đối chiếu nhật ký sửa 40 → 70 và gỡ allocation 20; đúng Admin/Manager, trước/sau; UI hiển thị tương ứng |
 | 13 | Thử xóa Employee/Skill/Project vẫn còn quan hệ qua FE: 409, lỗi hiển thị và bản ghi vẫn còn |

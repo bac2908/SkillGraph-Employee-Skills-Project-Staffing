@@ -78,6 +78,11 @@ export interface Assignment {
   employee_name: string;
   role: string;
   allocation: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  allocation_as_of?: string;
+  period_peak_allocation?: number;
+  period_remaining_allocation?: number;
   employee_total_allocation: number;
   employee_remaining_allocation: number;
 }
@@ -117,8 +122,19 @@ export interface Candidate extends Employee {
   collaborators: string[];
   shared_projects: string[];
   rank: number;
+  period_peak_allocation: number;
+  period_remaining_allocation: number;
+  can_allocate: boolean;
+  // UI handoff of the exact plan selected in the recommendation panel.
+  suggested_start_date?: string;
+  suggested_end_date?: string;
+  suggested_allocation?: number;
 }
 export interface Recommendations {
+  start_date: string;
+  end_date: string;
+  required_allocation: number;
+  capacity_only: boolean;
   project_id: string;
   summary: { uncovered_skill_count: number; candidate_count: number };
   uncovered_skills: GapSkill[];

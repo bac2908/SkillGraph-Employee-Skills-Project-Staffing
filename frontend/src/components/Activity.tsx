@@ -21,6 +21,8 @@ const fields: Record<string, string> = {
   status: 'Trạng thái',
   role: 'Vai trò',
   allocation: 'Phân bổ (%)',
+  start_date: 'Ngày bắt đầu',
+  end_date: 'Ngày kết thúc',
   min_level: 'Cấp độ tối thiểu',
   priority: 'Ưu tiên',
 };

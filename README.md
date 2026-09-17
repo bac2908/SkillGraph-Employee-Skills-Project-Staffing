@@ -2,7 +2,10 @@
 
 SkillGraph is a FastAPI/React application backed by CognoDB (Bolt/Neo4j driver)
 for skill coverage analysis and rule-based staffing recommendations. A suggested
-employee is not guaranteed to have remaining allocation.
+employee is not guaranteed a reservation: recommendations check capacity for a
+selected date range, and the backend validates again when saving. Allocation
+is planned workload, not an employee performance score. See
+[time-based allocation](docs/allocation-planning.md).
 
 New to the project? Start with the Vietnamese [project overview](docs/tong-quan-du-an.md)
 for its purpose, business value, user roles, workflow, architecture, current scope
@@ -132,9 +135,11 @@ default: a node that still has graph relationships returns `409 Conflict`.
 Relationship item endpoints use idempotent `PUT`: the first request creates the
 relationship and returns `201 Created`; later requests replace its properties
 and return `200 OK`. Employee allocation is an integer percentage from 1 to 100.
-All `WORKS_ON` relationships for one employee may total at most 100%; this rule
-is checked under a per-employee database lock to remain correct under concurrent
-requests.
+`WORKS_ON` accepts optional inclusive `start_date`/`end_date` (ISO date strings).
+Missing dates mean unbounded legacy assignments. Simultaneous allocation may
+total at most 100% on any day in the requested period. Validation follows a
+per-employee write lock in the same transaction as the write and audit; actual
+CognoDB concurrency acceptance remains pending on a separate test instance.
 
 ## Readiness and recovery
 

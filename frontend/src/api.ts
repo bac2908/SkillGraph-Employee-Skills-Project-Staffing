@@ -27,7 +27,7 @@ function readableDetail(detail: string): string {
       detail,
     );
   if (allocation)
-    return `Tổng phân bổ sẽ là ${allocation[1]}% (${allocation[2]}% ở dự án khác + ${allocation[3]}% yêu cầu). Giới hạn là 100%. Hãy giảm tỷ lệ hoặc điều chỉnh phân công khác.`;
+    return `Tổng phân bổ sẽ là ${allocation[1]}% tại ngày tải cao nhất trong kỳ (${allocation[2]}% ở dự án khác + ${allocation[3]}% yêu cầu). Giới hạn là 100%. Hãy giảm tỷ lệ, đổi thời gian hoặc điều chỉnh phân công khác.`;
   return detail;
 }
 

@@ -1,6 +1,7 @@
 from neo4j import Transaction
 from neo4j.exceptions import ConstraintError
 
+from app.core.allocation import planning_today
 from app.core.audit import AuditActor, AuditContext
 from app.db.graph import graph_db
 from app.repositories.activity_repository import write_event
@@ -24,10 +25,12 @@ ORDER BY skill.name
 
 TEAM_SKILL_LEVELS_QUERY = """
 MATCH (project:Project {project_id: $project_id})
-      <-[:WORKS_ON]-
+      <-[assignment:WORKS_ON]-
       (employee:Employee)
       -[employee_skill:HAS_SKILL]->
       (skill:Skill)
+WHERE (assignment.start_date IS NULL OR assignment.start_date <= $start_date)
+  AND (assignment.end_date IS NULL OR assignment.end_date >= $end_date)
 RETURN skill.skill_id AS skill_id,
        skill.name AS skill,
        max(employee_skill.level) AS best_team_level,
@@ -134,12 +137,20 @@ def get_required_skills(project_id: str) -> list[dict]:
         ) from exc
 
 
-def get_team_skill_levels(project_id: str) -> list[dict]:
+def get_team_skill_levels(
+    project_id: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict]:
+    start_date = start_date or planning_today().isoformat()
+    end_date = end_date or start_date
     try:
         with graph_db.driver.session() as session:
             result = session.run(
                 TEAM_SKILL_LEVELS_QUERY,
                 project_id=project_id,
+                start_date=start_date,
+                end_date=end_date,
             )
             return [record.data() for record in result]
     except Exception as exc:

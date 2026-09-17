@@ -81,6 +81,8 @@ class ProjectAssignmentService:
         allocation: int,
         *,
         actor: AuditActor,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> tuple[dict, bool]:
         _require_project(project_id)
         _require_employee(employee_id)
@@ -90,6 +92,8 @@ class ProjectAssignmentService:
             role,
             allocation,
             actor=actor,
+            start_date=start_date,
+            end_date=end_date,
         )
         if result.allocation_exceeded:
             raise AllocationExceededError(
