@@ -25,6 +25,10 @@ class RecommendationPlan(BaseModel):
 
 
 class CandidateRecommendationSummary(BaseModel):
+    required_skill_count: int = Field(
+        ge=0,
+        description="Zero means requirements must be configured, not that the team is covered.",
+    )
     uncovered_skill_count: int
     candidate_count: int
 

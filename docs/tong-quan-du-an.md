@@ -106,6 +106,10 @@ Không phải API công khai, không mở khóa/nâng quyền và không thay th
 
 ## 4. Một quy trình sử dụng từ đầu đến cuối
 
+Đọc [Tạo dự án và chọn nhân sự](project-staffing.md) để thao tác theo giao diện
+cập nhật 18/09. Mô tả không tự sinh yêu cầu kỹ năng; phải khai báo yêu cầu rõ
+ràng. Có thể xem gợi ý ngay khi dự án có yêu cầu, không cần có đội ban đầu.
+
 1. **Chuẩn bị dữ liệu:** Admin tạo danh mục kỹ năng, hồ sơ nhân viên và khai báo
    kỹ năng của từng người, gồm cấp độ và số năm kinh nghiệm.
 2. **Xác định nhu cầu:** Admin tạo dự án, cấp quyền cho Manager nếu cần;

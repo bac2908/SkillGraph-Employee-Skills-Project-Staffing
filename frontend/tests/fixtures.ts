@@ -315,6 +315,7 @@ export async function mockApi(
         required_allocation: Number(url.searchParams.get('required_allocation') || 1),
         capacity_only: url.searchParams.get('capacity_only') === 'true',
         summary: {
+          required_skill_count: gap(id).skills.length,
           uncovered_skill_count: id === 'PROJ001' ? 1 : 0,
           candidate_count: id === 'PROJ001' ? 2 : 0,
         },
@@ -331,7 +332,14 @@ export async function mockApi(
                 can_allocate: true,
                 matched_skill_count: 1,
                 matched_skills: [
-                  { skill_id: 'SK007', skill: 'Docker', level: i + 3, required_level: 3 },
+                  {
+                    skill_id: 'SK007',
+                    skill: 'Docker',
+                    level: i + 3,
+                    required_level: 3,
+                    years_experience: 2.5,
+                    priority: 'SHOULD',
+                  },
                 ],
                 collaboration_count: i ? 0 : 1,
                 collaborators: i ? [] : ['An Nguyen'],

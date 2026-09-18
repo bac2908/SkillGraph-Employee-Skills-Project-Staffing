@@ -116,7 +116,14 @@ export interface Gap {
   skills: GapSkill[];
 }
 export interface Candidate extends Employee {
-  matched_skills: { skill_id: string; skill: string; level: number; required_level: number }[];
+  matched_skills: {
+    skill_id: string;
+    skill: string;
+    level: number;
+    required_level: number;
+    years_experience: number;
+    priority: string;
+  }[];
   matched_skill_count: number;
   collaboration_count: number;
   collaborators: string[];
@@ -136,7 +143,7 @@ export interface Recommendations {
   required_allocation: number;
   capacity_only: boolean;
   project_id: string;
-  summary: { uncovered_skill_count: number; candidate_count: number };
+  summary: { required_skill_count: number; uncovered_skill_count: number; candidate_count: number };
   uncovered_skills: GapSkill[];
   candidates: Candidate[];
 }

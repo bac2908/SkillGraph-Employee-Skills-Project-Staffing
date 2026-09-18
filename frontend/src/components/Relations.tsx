@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Pencil, Trash2 } from 'lucide-react';
 import { request, save, useAll, useResource } from '../api';
 import type {
@@ -391,7 +392,7 @@ export function SkillRelations({
         detail={
           isEmployee
             ? 'Ghi nhận mức thành thạo và kinh nghiệm thực tế.'
-            : 'Đặt mức năng lực cần thiết cho đội ngũ dự án.'
+            : 'Khai báo kỹ năng, cấp độ tối thiểu và ưu tiên. Phần mô tả dự án không tự tạo những yêu cầu này.'
         }
         action={
           canEdit && (
@@ -504,6 +505,13 @@ export function SkillRelations({
             <p>Hãy thêm kỹ năng vào danh mục trước khi tạo liên kết.</p>
           )}
         </FormDialog>
+      )}
+      {!isEmployee && query.data && !query.isError && query.data.items.length > 0 && (
+        <div className="panel-foot">
+          <Link className="text-link" to={`/projects/${ownerId}?tab=analysis`}>
+            Xem ứng viên theo yêu cầu đã khai báo →
+          </Link>
+        </div>
       )}
       {remove && (
         <FormDialog

@@ -9,6 +9,7 @@ export default defineConfig({
     'activity.spec.ts',
     'usability.spec.ts',
     'allocation.spec.ts',
+    'project-staffing.spec.ts',
   ],
   fullyParallel: true,
   workers: 2,

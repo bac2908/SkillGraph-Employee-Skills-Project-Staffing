@@ -93,6 +93,27 @@ export function ProjectDetail() {
         description={project.description}
         action={<Badge value={project.status} />}
       />
+      <section className="project-staffing-guide" aria-label="Quy trình chọn nhân sự">
+        <strong>Từ thông tin dự án đến đội ngũ</strong>
+        <p>
+          Tên và mô tả giúp hiểu công việc; gợi ý nhân viên dựa trên yêu cầu kỹ năng đã khai báo, hồ
+          sơ kỹ năng và dung lượng trong kỳ.
+        </p>
+        <ol>
+          <li>
+            <Link to="?tab=requirements">1. Khai báo yêu cầu kỹ năng</Link>
+            <small>Chọn kỹ năng, cấp độ tối thiểu và ưu tiên.</small>
+          </li>
+          <li>
+            <Link to="?tab=analysis">2. Xem ứng viên phù hợp</Link>
+            <small>Chọn ngày, tỷ lệ cần phân bổ; xem lý do khớp và hồ sơ.</small>
+          </li>
+          <li>
+            <Link to="?tab=assignments">3. Xác nhận và quản lý đội ngũ</Link>
+            <small>Người có quyền xác nhận phân công; hệ thống không tự giao việc.</small>
+          </li>
+        </ol>
+      </section>
       <div className="tabs" role="tablist" aria-label="Nội dung dự án">
         {visibleTabs.map(([value, title], index) => (
           <button

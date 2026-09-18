@@ -242,7 +242,11 @@ test('real FE → FastAPI → graph: business lifecycle, RBAC, audit and allocat
 
   await test.step('06 Candidate ranking: capacity first, then matches, collaboration, level, ID', async () => {
     const recommendations = await read(page.request, `/api/projects/${project(1)}/recommendations`);
-    expect(recommendations.summary).toEqual({ uncovered_skill_count: 2, candidate_count: 4 });
+    expect(recommendations.summary).toEqual({
+      required_skill_count: 3,
+      uncovered_skill_count: 2,
+      candidate_count: 4,
+    });
     expect(recommendations.candidates.map((c: { employee_id: string }) => c.employee_id)).toEqual([
       emp(3),
       emp(4),

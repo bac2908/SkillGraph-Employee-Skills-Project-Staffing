@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCheck, CircleDot, Sparkles, Users } from 'lucide-react';
 import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useResource } from '../api';
 import type { Candidate, Gap, Recommendations } from '../types';
 import { Avatar, Badge, Empty, ErrorNotice, Loading, SectionHeading } from './ui';
@@ -101,6 +102,7 @@ export function CandidateSuggestions({
     `/api/projects/${projectId}/recommendations?${new URLSearchParams(plan)}`,
   );
   const { canManageProject } = useAuth();
+  const needsRequirements = query.data?.summary.required_skill_count === 0;
   return (
     <section className="panel recommendations">
       <SectionHeading
@@ -113,85 +115,108 @@ export function CandidateSuggestions({
           </span>
         }
       />
-      <form
-        className="recommendation-filters"
-        aria-label="Kế hoạch phân công"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const start = String(data.get('start_date'));
-          const end = String(data.get('end_date'));
-          if (end < start) {
-            setPlanError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
-            return;
-          }
-          setPlanError('');
-          setPlan({
-            start_date: start,
-            end_date: end,
-            required_allocation: String(data.get('required_allocation')),
-            capacity_only: data.has('capacity_only') ? 'true' : 'false',
-          });
-        }}
-      >
-        <label htmlFor={`${filterId}-start`}>
-          Từ ngày
-          <input
-            id={`${filterId}-start`}
-            name="start_date"
-            type="date"
-            required
-            defaultValue={plan.start_date}
-          />
-        </label>
-        <label htmlFor={`${filterId}-end`}>
-          Đến ngày
-          <input
-            id={`${filterId}-end`}
-            name="end_date"
-            type="date"
-            required
-            defaultValue={plan.end_date}
-          />
-        </label>
-        <label htmlFor={`${filterId}-load`}>
-          Cần phân bổ (%)
-          <input
-            id={`${filterId}-load`}
-            name="required_allocation"
-            type="number"
-            required
-            min="1"
-            max="100"
-            step="1"
-            defaultValue="20"
-          />
-        </label>
-        <label className="capacity-filter">
-          <input name="capacity_only" type="checkbox" defaultChecked />
-          Chỉ người đủ dung lượng
-        </label>
-        <button className="button secondary" type="submit">
-          Áp dụng kế hoạch
-        </button>
-      </form>
-      {planError && <p role="alert">{planError}</p>}
-      <p className="workflow-note">
-        Kế hoạch đang áp dụng: {plan.start_date} → {plan.end_date}, cần {plan.required_allocation}%
-        mỗi ngày (UTC+07). Gợi ý có xét dung lượng trong toàn bộ kỳ; số liệu không giữ chỗ.
-      </p>
-      <details className="recommendation-explainer">
-        <summary>Cách đọc gợi ý và giới hạn</summary>
-        <p>
-          Kỹ năng của đội chỉ tính người được phân công xuyên suốt kỳ nên kết quả có thể thận trọng
-          hơn từng ngày. Được gợi ý không có nghĩa chắc chắn nhận thêm việc; hãy xác nhận với người
-          quản lý. Bản ghi đã gắn dự án được điều chỉnh tại tab Phân công.
-        </p>
-      </details>
+      {!needsRequirements && (
+        <>
+          <form
+            className="recommendation-filters"
+            aria-label="Kế hoạch phân công"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const data = new FormData(event.currentTarget);
+              const start = String(data.get('start_date'));
+              const end = String(data.get('end_date'));
+              if (end < start) {
+                setPlanError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
+                return;
+              }
+              setPlanError('');
+              setPlan({
+                start_date: start,
+                end_date: end,
+                required_allocation: String(data.get('required_allocation')),
+                capacity_only: data.has('capacity_only') ? 'true' : 'false',
+              });
+            }}
+          >
+            <label htmlFor={`${filterId}-start`}>
+              Từ ngày
+              <input
+                id={`${filterId}-start`}
+                name="start_date"
+                type="date"
+                required
+                defaultValue={plan.start_date}
+              />
+            </label>
+            <label htmlFor={`${filterId}-end`}>
+              Đến ngày
+              <input
+                id={`${filterId}-end`}
+                name="end_date"
+                type="date"
+                required
+                defaultValue={plan.end_date}
+              />
+            </label>
+            <label htmlFor={`${filterId}-load`}>
+              Cần phân bổ (%)
+              <input
+                id={`${filterId}-load`}
+                name="required_allocation"
+                type="number"
+                required
+                min="1"
+                max="100"
+                step="1"
+                defaultValue="20"
+              />
+            </label>
+            <label className="capacity-filter">
+              <input name="capacity_only" type="checkbox" defaultChecked />
+              Chỉ người đủ dung lượng
+            </label>
+            <button className="button secondary" type="submit">
+              Áp dụng kế hoạch
+            </button>
+          </form>
+          {planError && <p role="alert">{planError}</p>}
+          <p className="workflow-note">
+            Kế hoạch đang áp dụng: {plan.start_date} → {plan.end_date}, cần{' '}
+            {plan.required_allocation}% mỗi ngày (UTC+07). Gợi ý có xét dung lượng trong toàn bộ kỳ;
+            số liệu không giữ chỗ.
+          </p>
+          <details className="recommendation-explainer">
+            <summary>Cách đọc gợi ý và giới hạn</summary>
+            <p>
+              Kỹ năng của đội chỉ tính người được phân công xuyên suốt kỳ nên kết quả có thể thận
+              trọng hơn từng ngày. Được gợi ý không có nghĩa chắc chắn nhận thêm việc; hãy xác nhận
+              với người quản lý. Bản ghi đã gắn dự án được điều chỉnh tại tab Phân công.
+            </p>
+          </details>
+        </>
+      )}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
         <ErrorNotice error={query.error} retry={() => void query.refetch()} />
+      ) : needsRequirements ? (
+        <>
+          <Empty
+            title="Chưa đủ thông tin để gợi ý nhân viên"
+            detail={
+              canManageProject(projectId)
+                ? 'Dự án chưa khai báo yêu cầu kỹ năng. Hãy chọn kỹ năng và cấp độ tối thiểu; tên hoặc mô tả dự án chưa đủ để tìm người.'
+                : 'Dự án chưa khai báo yêu cầu kỹ năng. Liên hệ Admin hoặc quản lý dự án để bổ sung; chưa thể kết luận đội ngũ đã đáp ứng.'
+            }
+          />
+          {canManageProject(projectId) && (
+            <div className="panel-foot">
+              <Link className="text-link" to={`/projects/${projectId}?tab=requirements`}>
+                Khai báo yêu cầu kỹ năng →
+              </Link>
+            </div>
+          )}
+        </>
       ) : !query.data.candidates.length ? (
         <Empty
           title={
@@ -217,6 +242,9 @@ export function CandidateSuggestions({
               <p>
                 {candidate.title} · {candidate.seniority}
               </p>
+              <p>
+                {candidate.employee_id} · {candidate.location}
+              </p>
               <p className="workflow-note">
                 Còn tối thiểu {candidate.period_remaining_allocation}% trong kỳ ·{' '}
                 {candidate.can_allocate
@@ -224,13 +252,26 @@ export function CandidateSuggestions({
                   : 'Chưa đủ dung lượng theo kế hoạch'}
                 .
               </p>
-              <div className="chips">
+              <p>
+                Đáp ứng {candidate.matched_skill_count}/{query.data.summary.uncovered_skill_count}{' '}
+                kỹ năng còn thiếu trong kỳ, không phải toàn bộ tiêu chí nhân sự.
+              </p>
+              <ul
+                className="candidate-matches"
+                aria-label={`Kỹ năng phù hợp của ${candidate.name}`}
+              >
                 {candidate.matched_skills.map((skill) => (
-                  <span className="chip" key={skill.skill_id}>
-                    {skill.skill} <b>{skill.level}/5</b>
-                  </span>
+                  <li key={skill.skill_id}>
+                    <strong>{skill.skill}</strong>
+                    <span>
+                      Có {skill.level}/5 · yêu cầu {skill.required_level}/5
+                    </span>
+                    <small>
+                      {skill.years_experience} năm kinh nghiệm · <Badge value={skill.priority} />
+                    </small>
+                  </li>
                 ))}
-              </div>
+              </ul>
               <div className="collaboration">
                 <Users size={15} />
                 <span>
@@ -239,6 +280,13 @@ export function CandidateSuggestions({
                     : 'Cơ hội kết nối mới trong đội ngũ'}
                 </span>
               </div>
+              <Link
+                className="text-link candidate-profile-link"
+                to={`/employees/${candidate.employee_id}`}
+                aria-label={`Xem hồ sơ ${candidate.name}`}
+              >
+                Xem hồ sơ nhân viên <ArrowUpRight size={14} />
+              </Link>
               {canManageProject(projectId) ? (
                 <button
                   className="button secondary"

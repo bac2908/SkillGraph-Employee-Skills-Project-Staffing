@@ -28,6 +28,7 @@ export function Directory({ resource }: { resource: Resource }) {
   const [offset, setOffset] = useState(0);
   const [edit, setEdit] = useState<Entity | 'new' | null>(null);
   const [remove, setRemove] = useState<Entity | null>(null);
+  const [createdProject, setCreatedProject] = useState<{ id: string; name: string } | null>(null);
   useEffect(() => {
     if (search === debounced) return;
     const timer = setTimeout(() => {
@@ -53,6 +54,18 @@ export function Directory({ resource }: { resource: Resource }) {
         }
       />
       {resource === 'employees' && <AvailabilityNote />}
+      {resource === 'projects' && createdProject && (
+        <section className="project-next-step" aria-label="Bước tiếp theo cho dự án mới">
+          <p role="status">Đã tạo dự án {createdProject.name}.</p>
+          <p>
+            Tiếp theo, khai báo kỹ năng và cấp độ cần thiết để tìm nhân viên phù hợp. Tên và mô tả
+            chưa tự tạo yêu cầu kỹ năng.
+          </p>
+          <Link className="button primary" to={`/projects/${createdProject.id}?tab=requirements`}>
+            Khai báo yêu cầu cho dự án vừa tạo <ArrowUpRight size={16} />
+          </Link>
+        </section>
+      )}
       <section className="panel directory-panel">
         <div className="toolbar">
           <label className="search-field">
@@ -235,6 +248,11 @@ export function Directory({ resource }: { resource: Resource }) {
       {edit && (
         <FormDialog
           title={`${edit === 'new' ? 'Thêm' : 'Chỉnh sửa'} ${config.singular}`}
+          description={
+            resource === 'projects' && edit === 'new'
+              ? 'Bước 1: tạo thông tin dự án. Sau khi lưu, khai báo yêu cầu kỹ năng rồi xem ứng viên nội bộ; mô tả không được tự phân tích thành kỹ năng.'
+              : undefined
+          }
           fields={config.fields.map((f) => ({
             ...f,
             disabled: edit !== 'new' && f.name === config.id,
@@ -246,13 +264,15 @@ export function Directory({ resource }: { resource: Resource }) {
           }
           onClose={() => setEdit(null)}
           onSubmit={async (values) => {
-            await write(() =>
-              save(
+            await write(async () => {
+              const saved = await save<Entity>(
                 `/api/${resource}${edit === 'new' ? '' : `/${edit[config.id]}`}`,
                 edit === 'new' ? 'POST' : 'PATCH',
                 values,
-              ),
-            );
+              );
+              if (resource === 'projects' && edit === 'new')
+                setCreatedProject({ id: String(saved.project_id), name: saved.name });
+            });
           }}
         />
       )}
@@ -268,6 +288,8 @@ export function Directory({ resource }: { resource: Resource }) {
               () => request(`/api/${resource}/${remove[config.id]}`, { method: 'DELETE' }),
               'Đã xóa bản ghi.',
             );
+            if (resource === 'projects' && createdProject?.id === remove.project_id)
+              setCreatedProject(null);
             if (rows.length === 1 && offset) setOffset((v) => Math.max(0, v - 10));
           }}
         />

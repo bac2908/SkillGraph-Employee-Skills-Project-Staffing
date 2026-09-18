@@ -8,6 +8,7 @@ PROJECT_ID = "PROJ001"
 
 def validate_result(result: dict) -> None:
     if result["summary"] != {
+        "required_skill_count": 5,
         "uncovered_skill_count": 1,
         "candidate_count": 2,
     }:

@@ -150,7 +150,11 @@ def install_rbac_data(store):
         "end_date": kwargs.get("end_date") or "2026-09-17",
         "required_allocation": kwargs.get("required_allocation", 1),
         "capacity_only": kwargs.get("capacity_only", False),
-        "summary": {"uncovered_skill_count": 0, "candidate_count": 0},
+        "summary": {
+            "required_skill_count": 0,
+            "uncovered_skill_count": 0,
+            "candidate_count": 0,
+        },
         "uncovered_skills": [],
         "candidates": [],
     }

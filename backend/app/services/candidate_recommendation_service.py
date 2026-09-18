@@ -28,6 +28,7 @@ class CandidateRecommendationService:
         skill_gap_result = self.skill_gap_service.analyze(
             project_id, start_date, end_date
         )
+        required_skill_count = len(skill_gap_result["skills"])
         uncovered_skills = [
             skill
             for skill in skill_gap_result["skills"]
@@ -35,7 +36,7 @@ class CandidateRecommendationService:
         ]
 
         if not uncovered_skills:
-            return {**self._empty_result(project_id), **plan}
+            return {**self._empty_result(project_id, required_skill_count), **plan}
 
         uncovered_skill_map = {skill["skill_id"]: skill for skill in uncovered_skills}
         current_member_ids = candidate_repository.get_project_member_ids(project_id)
@@ -69,6 +70,7 @@ class CandidateRecommendationService:
             **plan,
             "project_id": project_id,
             "summary": {
+                "required_skill_count": required_skill_count,
                 "uncovered_skill_count": len(uncovered_skills),
                 "candidate_count": len(ranked_candidates),
             },
@@ -77,10 +79,11 @@ class CandidateRecommendationService:
         }
 
     @staticmethod
-    def _empty_result(project_id: str) -> dict:
+    def _empty_result(project_id: str, required_skill_count: int) -> dict:
         return {
             "project_id": project_id,
             "summary": {
+                "required_skill_count": required_skill_count,
                 "uncovered_skill_count": 0,
                 "candidate_count": 0,
             },

@@ -12,6 +12,7 @@ tính năng. Quy ước này được lưu ở [AGENTS.md](../AGENTS.md).
 | --- | --- |
 | [Tổng quan dự án — đọc trước](tong-quan-du-an.md) | Mục đích, giá trị doanh nghiệp, role, quy trình, kiến trúc, trạng thái và tiêu chí hoàn thành |
 | [Phân bổ theo thời gian và gợi ý dung lượng](allocation-planning.md) | Ngày hiệu lực, giới hạn 100% theo kỳ, tải hôm nay, lọc/xếp gợi ý, audit, tương thích và kiểm thử |
+| [Tạo dự án và chọn nhân sự](project-staffing.md) | Nhập thông tin/yêu cầu, xem ứng viên và lý do khớp, phân biệt chưa cấu hình/không có ứng viên/đã đáp ứng |
 | [Bàn giao bản local — bước 6](handoff.md) | Cài mới, khởi động, schema/Admin, nguồn ZIP/manifest và checklist người nhận |
 | [Báo cáo kiểm chứng phiên bản](release-verification.md) | Ngày/môi trường/kết quả thực chạy, cài riêng và phạm vi chưa kiểm tra |
 | [Kịch bản demo tổng hợp](demo-scenario.md) | Bộ dữ liệu nhập qua UI, coverage, allocation, quyền, audit và dọn đúng phạm vi |

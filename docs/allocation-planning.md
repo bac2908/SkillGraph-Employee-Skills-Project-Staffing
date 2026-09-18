@@ -47,6 +47,11 @@ import hoặc Cypher trực tiếp không được lớp kiểm tra của ứng 
 
 ## 3. Gợi ý nhân sự đã thay đổi thế nào?
 
+Bổ sung 18/09: xem [luồng tạo dự án và chọn nhân sự](project-staffing.md).
+API có thêm `summary.required_skill_count`; FE phân biệt dự án chưa khai báo
+yêu cầu với đội đã đáp ứng, hiển thị chi tiết cấp độ/kinh nghiệm và link hồ sơ.
+Không đổi quy tắc xếp hạng của đợt 17/09.
+
 Trên dashboard/chi tiết dự án có biểu mẫu kế hoạch: từ ngày, đến ngày, tỷ lệ cần
 phân bổ và checkbox chỉ người đủ dung lượng. Phải bấm **Áp dụng kế hoạch**;
 phần mô tả bên dưới ghi rõ kế hoạch nào đang áp dụng.

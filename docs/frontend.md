@@ -36,6 +36,9 @@ Windows chứa dấu `&`. Không cần đổi tên thư mục dự án.
   mở hồ sơ để gán, cập nhật và gỡ kỹ năng.
 - Kỹ năng: tìm kiếm, lọc theo nhóm, tạo/sửa/xóa danh mục.
 - Dự án: tạo/sửa/xóa; trang chi tiết gồm phân tích, đội ngũ và yêu cầu kỹ năng.
+  Cập nhật 18/09: [luồng tạo dự án → chọn nhân sự](project-staffing.md) có nút
+  sang khai báo sau tạo, hướng dẫn ba bước và thẻ ứng viên chi tiết. Dự án
+  chưa có yêu cầu không còn bị báo nhầm là đội ngũ đã đáp ứng.
 - Hoạt động (Admin): trang lịch sử chung và tab trong chi tiết dự án, lọc/phân
   trang và xem giá trị trước/sau. Xem [nhật ký dự án](project-activity.md).
 - Phân công: xem dung lượng còn lại, đặt vai trò, allocation và ngày bắt đầu/kết thúc, chỉnh sửa hoặc gỡ
