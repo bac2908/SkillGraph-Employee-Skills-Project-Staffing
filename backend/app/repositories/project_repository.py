@@ -3,6 +3,7 @@ from neo4j.exceptions import ConstraintError
 
 from app.core.allocation import planning_today
 from app.core.audit import AuditActor, AuditContext
+from app.core.concurrency import check_version
 from app.db.graph import graph_db
 from app.repositories.activity_repository import write_event
 from app.repositories.errors import DuplicateRecordError, RepositoryError
@@ -42,7 +43,8 @@ PROJECT_FIELDS = """
 project.project_id AS project_id,
 project.name AS name,
 project.description AS description,
-project.status AS status
+project.status AS status,
+coalesce(project.version, '0') AS version
 """
 
 GET_PROJECT_QUERY = f"""
@@ -216,7 +218,9 @@ def get_project(project_id: str) -> dict | None:
 def _create_project(
     transaction: Transaction, properties: dict, audit: AuditContext
 ) -> dict:
-    record = transaction.run(CREATE_PROJECT_QUERY, properties=properties).single()
+    record = transaction.run(
+        CREATE_PROJECT_QUERY, properties={**properties, "version": audit.event_id}
+    ).single()
     if record is None:
         raise ProjectRepositoryError("Project was not created.")
     project = record.data()
@@ -246,30 +250,50 @@ def create_project(properties: dict, *, actor: AuditActor) -> dict:
 
 
 def _update_project(
-    transaction: Transaction, project_id: str, updates: dict, audit: AuditContext
+    transaction: Transaction,
+    project_id: str,
+    updates: dict,
+    audit: AuditContext,
+    expected_version: str | None = None,
 ) -> dict | None:
-    locked = transaction.run(LOCK_PROJECT_QUERY, project_id=project_id).single()
-    if locked is None:
+    transaction.run(LOCK_PROJECT_QUERY, project_id=project_id).consume()
+    # Separate read after the lock: do not rely on a pre-lock snapshot.
+    fresh = transaction.run(GET_PROJECT_QUERY, project_id=project_id).single()
+    before = fresh.data() if fresh else None
+    check_version(before, expected_version)
+    if before is None:
         return None
+    if all(before.get(k) == v for k, v in updates.items()):
+        return before
     record = transaction.run(
-        UPDATE_PROJECT_QUERY, project_id=project_id, updates=updates
+        UPDATE_PROJECT_QUERY,
+        project_id=project_id,
+        updates={**updates, "version": audit.event_id},
     ).single()
     if record is None:
         raise ProjectRepositoryError("Project update was not saved.")
     project = record.data()
-    write_event(
-        transaction, audit, project_id, "PROJECT", project_id, locked["before"], project
-    )
+    write_event(transaction, audit, project_id, "PROJECT", project_id, before, project)
     return project
 
 
-def update_project(project_id: str, updates: dict, *, actor: AuditActor) -> dict | None:
+def update_project(
+    project_id: str,
+    updates: dict,
+    *,
+    actor: AuditActor,
+    expected_version: str | None = None,
+) -> dict | None:
     audit = AuditContext.create(actor)
     try:
         with graph_db.driver.session() as session:
-            return session.execute_write(_update_project, project_id, updates, audit)
+            return session.execute_write(
+                _update_project, project_id, updates, audit, expected_version
+            )
     except ConstraintError as exc:
         raise DuplicateRecordError("Project update is not unique.") from exc
+    except RepositoryError:
+        raise
     except Exception as exc:
         raise ProjectRepositoryError("Unable to update project.") from exc
 

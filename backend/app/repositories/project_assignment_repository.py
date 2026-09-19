@@ -4,6 +4,7 @@ from neo4j import Transaction
 
 from app.core.allocation import peak_allocation, planning_today
 from app.core.audit import AuditActor, AuditContext
+from app.core.concurrency import check_version
 from app.db.graph import graph_db
 from app.repositories.activity_repository import write_event
 from app.repositories.errors import RepositoryError
@@ -20,6 +21,7 @@ RETURN project.project_id AS project_id,
        employee.employee_id AS employee_id,
        employee.name AS employee_name,
        assignment.role AS role,
+       coalesce(assignment.version, '0') AS version,
        assignment.allocation AS allocation,
        assignment.start_date AS start_date,
        assignment.end_date AS end_date,
@@ -59,12 +61,14 @@ MERGE (employee)-[assignment:WORKS_ON]->(project)
 SET assignment.role = $role,
     assignment.allocation = $allocation,
     assignment.start_date = $start_date,
-    assignment.end_date = $end_date
+    assignment.end_date = $end_date,
+    assignment.version = $version
 RETURN project.project_id AS project_id,
        project.name AS project_name,
        employee.employee_id AS employee_id,
        employee.name AS employee_name,
        assignment.role AS role,
+       coalesce(assignment.version, '0') AS version,
        assignment.allocation AS allocation,
        assignment.start_date AS start_date,
        assignment.end_date AS end_date
@@ -153,6 +157,7 @@ def _upsert_project_assignment(
     audit: AuditContext,
     start_date: str | None = None,
     end_date: str | None = None,
+    expected_version: str | None = None,
 ) -> AssignmentUpsertResult:
     # Acquire the shared employee write lock BEFORE reading any other assignment.
     # Keep lock, read, validation, MERGE and audit in the same write transaction.
@@ -192,8 +197,19 @@ def _upsert_project_assignment(
         else None
     )
 
+    check_version(before, expected_version)
+    changed = before is None or any(
+        before.get(k) != v
+        for k, v in {
+            "role": role,
+            "allocation": allocation,
+            "start_date": start_date,
+            "end_date": end_date,
+        }.items()
+    )
     record = transaction.run(
         UPSERT_PROJECT_ASSIGNMENT_QUERY,
+        version=audit.event_id if changed else before.get("version", "0"),
         project_id=project_id,
         employee_id=employee_id,
         role=role,
@@ -231,6 +247,7 @@ def upsert_project_assignment(
     actor: AuditActor,
     start_date: str | None = None,
     end_date: str | None = None,
+    expected_version: str | None = None,
 ) -> AssignmentUpsertResult:
     audit = AuditContext.create(actor)
     try:
@@ -244,6 +261,7 @@ def upsert_project_assignment(
                 audit,
                 start_date,
                 end_date,
+                expected_version,
             )
     except RepositoryError:
         raise

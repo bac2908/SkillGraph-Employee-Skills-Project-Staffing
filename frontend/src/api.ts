@@ -10,6 +10,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public code?: string,
   ) {
     super(message);
   }
@@ -78,7 +79,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
               : typeof detail === 'string'
                 ? readableDetail(detail)
                 : `Yêu cầu không thành công (${response.status}).`;
-      throw new ApiError(response.status, message);
+      throw new ApiError(response.status, message, data?.code);
     }
     return response.status === 204 ? (undefined as T) : await response.json();
   } catch (error) {

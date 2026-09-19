@@ -47,9 +47,10 @@ class ActivityService:
         until: datetime | None,
         cursor: str | None,
         limit: int,
+        reader=None,
     ) -> dict:
         cursor_time, cursor_id = decode_cursor(cursor)
-        items = activity_repository.list_events(
+        items = (reader or activity_repository.list_events)(
             {
                 "project_id": project_id,
                 "action": action,

@@ -63,3 +63,4 @@ class EmployeeUpdate(PartialUpdateModel):
 
 class EmployeeRead(EmployeeFields):
     employee_id: EmployeeId
+    version: str = "0"

@@ -8,12 +8,19 @@ from app.schemas.common import APIModel
 
 
 class ActivityAction(StrEnum):
+    PASSWORD_RESET = "PASSWORD_RESET"
+    PASSWORD_CHANGED = "PASSWORD_CHANGED"
+    ADMIN_RECOVERED = "ADMIN_RECOVERED"
     CREATED = "CREATED"
     UPDATED = "UPDATED"
     DELETED = "DELETED"
 
 
 class ActivityKind(StrEnum):
+    ACCOUNT = "ACCOUNT"
+    EMPLOYEE = "EMPLOYEE"
+    SKILL = "SKILL"
+    HAS_SKILL = "HAS_SKILL"
     PROJECT = "PROJECT"
     WORKS_ON = "WORKS_ON"
     REQUIRES_SKILL = "REQUIRES_SKILL"
@@ -24,7 +31,7 @@ class ActivityRead(APIModel):
     occurred_at: AwareDatetime
     actor_id: str
     actor_name: str
-    project_id: str
+    project_id: str | None
     action: ActivityAction
     resource_type: ActivityKind
     resource_id: str

@@ -1,9 +1,21 @@
 from app.db.graph import graph_db
 
 TEAMS = [
-    {"team_id": "TEAM001", "name": "Backend Team", "description": "Backend services and APIs"},
-    {"team_id": "TEAM002", "name": "Frontend Team", "description": "Web frontend development"},
-    {"team_id": "TEAM003", "name": "Platform Team", "description": "Infrastructure, DevOps and cloud platform"},
+    {
+        "team_id": "TEAM001",
+        "name": "Backend Team",
+        "description": "Backend services and APIs",
+    },
+    {
+        "team_id": "TEAM002",
+        "name": "Frontend Team",
+        "description": "Web frontend development",
+    },
+    {
+        "team_id": "TEAM003",
+        "name": "Platform Team",
+        "description": "Infrastructure, DevOps and cloud platform",
+    },
 ]
 
 SKILLS = [
@@ -22,20 +34,99 @@ SKILLS = [
 ]
 
 EMPLOYEES = [
-    {"employee_id": "EMP001", "name": "Nguyen Van Bac", "email": "bac@example.com", "title": "Backend Developer", "seniority": "Junior", "status": "AVAILABLE", "location": "Ho Chi Minh City"},
-    {"employee_id": "EMP002", "name": "An Nguyen", "email": "an@example.com", "title": "Backend Developer", "seniority": "Middle", "status": "ASSIGNED", "location": "Ho Chi Minh City"},
-    {"employee_id": "EMP003", "name": "Minh Tran", "email": "minh@example.com", "title": "Frontend Developer", "seniority": "Junior", "status": "ASSIGNED", "location": "Ho Chi Minh City"},
-    {"employee_id": "EMP004", "name": "Lan Le", "email": "lan@example.com", "title": "DevOps Engineer", "seniority": "Middle", "status": "AVAILABLE", "location": "Da Nang"},
-    {"employee_id": "EMP005", "name": "Huy Pham", "email": "huy@example.com", "title": "Backend Developer", "seniority": "Middle", "status": "ASSIGNED", "location": "Ho Chi Minh City"},
-    {"employee_id": "EMP006", "name": "Mai Vo", "email": "mai@example.com", "title": "Full-stack Developer", "seniority": "Junior", "status": "AVAILABLE", "location": "Ho Chi Minh City"},
-    {"employee_id": "EMP007", "name": "Khoa Nguyen", "email": "khoa@example.com", "title": "Backend Developer", "seniority": "Junior", "status": "AVAILABLE", "location": "Ha Noi"},
-    {"employee_id": "EMP008", "name": "Thao Tran", "email": "thao@example.com", "title": "Data Engineer", "seniority": "Middle", "status": "AVAILABLE", "location": "Ho Chi Minh City"},
+    {
+        "employee_id": "EMP001",
+        "name": "Nguyen Van Bac",
+        "email": "bac@example.com",
+        "title": "Backend Developer",
+        "seniority": "Junior",
+        "status": "AVAILABLE",
+        "location": "Ho Chi Minh City",
+    },
+    {
+        "employee_id": "EMP002",
+        "name": "An Nguyen",
+        "email": "an@example.com",
+        "title": "Backend Developer",
+        "seniority": "Middle",
+        "status": "ASSIGNED",
+        "location": "Ho Chi Minh City",
+    },
+    {
+        "employee_id": "EMP003",
+        "name": "Minh Tran",
+        "email": "minh@example.com",
+        "title": "Frontend Developer",
+        "seniority": "Junior",
+        "status": "ASSIGNED",
+        "location": "Ho Chi Minh City",
+    },
+    {
+        "employee_id": "EMP004",
+        "name": "Lan Le",
+        "email": "lan@example.com",
+        "title": "DevOps Engineer",
+        "seniority": "Middle",
+        "status": "AVAILABLE",
+        "location": "Da Nang",
+    },
+    {
+        "employee_id": "EMP005",
+        "name": "Huy Pham",
+        "email": "huy@example.com",
+        "title": "Backend Developer",
+        "seniority": "Middle",
+        "status": "ASSIGNED",
+        "location": "Ho Chi Minh City",
+    },
+    {
+        "employee_id": "EMP006",
+        "name": "Mai Vo",
+        "email": "mai@example.com",
+        "title": "Full-stack Developer",
+        "seniority": "Junior",
+        "status": "AVAILABLE",
+        "location": "Ho Chi Minh City",
+    },
+    {
+        "employee_id": "EMP007",
+        "name": "Khoa Nguyen",
+        "email": "khoa@example.com",
+        "title": "Backend Developer",
+        "seniority": "Junior",
+        "status": "AVAILABLE",
+        "location": "Ha Noi",
+    },
+    {
+        "employee_id": "EMP008",
+        "name": "Thao Tran",
+        "email": "thao@example.com",
+        "title": "Data Engineer",
+        "seniority": "Middle",
+        "status": "AVAILABLE",
+        "location": "Ho Chi Minh City",
+    },
 ]
 
 PROJECTS = [
-    {"project_id": "PROJ001", "name": "E-commerce Platform", "description": "Online commerce platform for customers and administrators", "status": "ACTIVE"},
-    {"project_id": "PROJ002", "name": "Cloud Gaming Platform", "description": "Cloud gaming and remote gaming infrastructure platform", "status": "ACTIVE"},
-    {"project_id": "PROJ003", "name": "Analytics Platform", "description": "Internal analytics and reporting platform", "status": "PLANNING"},
+    {
+        "project_id": "PROJ001",
+        "name": "E-commerce Platform",
+        "description": "Online commerce platform for customers and administrators",
+        "status": "ACTIVE",
+    },
+    {
+        "project_id": "PROJ002",
+        "name": "Cloud Gaming Platform",
+        "description": "Cloud gaming and remote gaming infrastructure platform",
+        "status": "ACTIVE",
+    },
+    {
+        "project_id": "PROJ003",
+        "name": "Analytics Platform",
+        "description": "Internal analytics and reporting platform",
+        "status": "PLANNING",
+    },
 ]
 
 TEAM_MEMBERSHIPS = [
@@ -86,29 +177,89 @@ EMPLOYEE_SKILLS = [
 ]
 
 WORK_ASSIGNMENTS = [
-    {"employee_id": "EMP002", "project_id": "PROJ001", "role": "Backend Developer", "allocation": 80},
-    {"employee_id": "EMP003", "project_id": "PROJ001", "role": "Frontend Developer", "allocation": 100},
-    {"employee_id": "EMP005", "project_id": "PROJ001", "role": "Backend Developer", "allocation": 80},
-    {"employee_id": "EMP001", "project_id": "PROJ002", "role": "Backend Developer", "allocation": 80},
-    {"employee_id": "EMP002", "project_id": "PROJ002", "role": "Backend Developer", "allocation": 20},
-    {"employee_id": "EMP004", "project_id": "PROJ003", "role": "DevOps Engineer", "allocation": 40},
-    {"employee_id": "EMP007", "project_id": "PROJ003", "role": "Backend Developer", "allocation": 50},
-    {"employee_id": "EMP008", "project_id": "PROJ003", "role": "Data Engineer", "allocation": 80},
+    {
+        "employee_id": "EMP002",
+        "project_id": "PROJ001",
+        "role": "Backend Developer",
+        "allocation": 80,
+    },
+    {
+        "employee_id": "EMP003",
+        "project_id": "PROJ001",
+        "role": "Frontend Developer",
+        "allocation": 100,
+    },
+    {
+        "employee_id": "EMP005",
+        "project_id": "PROJ001",
+        "role": "Backend Developer",
+        "allocation": 80,
+    },
+    {
+        "employee_id": "EMP001",
+        "project_id": "PROJ002",
+        "role": "Backend Developer",
+        "allocation": 80,
+    },
+    {
+        "employee_id": "EMP002",
+        "project_id": "PROJ002",
+        "role": "Backend Developer",
+        "allocation": 20,
+    },
+    {
+        "employee_id": "EMP004",
+        "project_id": "PROJ003",
+        "role": "DevOps Engineer",
+        "allocation": 40,
+    },
+    {
+        "employee_id": "EMP007",
+        "project_id": "PROJ003",
+        "role": "Backend Developer",
+        "allocation": 50,
+    },
+    {
+        "employee_id": "EMP008",
+        "project_id": "PROJ003",
+        "role": "Data Engineer",
+        "allocation": 80,
+    },
 ]
 
 PROJECT_SKILLS = [
     {"project_id": "PROJ001", "skill_id": "SK003", "min_level": 3, "priority": "MUST"},
     {"project_id": "PROJ001", "skill_id": "SK004", "min_level": 3, "priority": "MUST"},
     {"project_id": "PROJ001", "skill_id": "SK005", "min_level": 3, "priority": "MUST"},
-    {"project_id": "PROJ001", "skill_id": "SK007", "min_level": 3, "priority": "SHOULD"},
-    {"project_id": "PROJ001", "skill_id": "SK008", "min_level": 2, "priority": "SHOULD"},
+    {
+        "project_id": "PROJ001",
+        "skill_id": "SK007",
+        "min_level": 3,
+        "priority": "SHOULD",
+    },
+    {
+        "project_id": "PROJ001",
+        "skill_id": "SK008",
+        "min_level": 2,
+        "priority": "SHOULD",
+    },
     {"project_id": "PROJ002", "skill_id": "SK001", "min_level": 3, "priority": "MUST"},
     {"project_id": "PROJ002", "skill_id": "SK002", "min_level": 3, "priority": "MUST"},
     {"project_id": "PROJ002", "skill_id": "SK006", "min_level": 3, "priority": "MUST"},
-    {"project_id": "PROJ002", "skill_id": "SK007", "min_level": 2, "priority": "SHOULD"},
+    {
+        "project_id": "PROJ002",
+        "skill_id": "SK007",
+        "min_level": 2,
+        "priority": "SHOULD",
+    },
     {"project_id": "PROJ003", "skill_id": "SK001", "min_level": 3, "priority": "MUST"},
     {"project_id": "PROJ003", "skill_id": "SK006", "min_level": 3, "priority": "MUST"},
-    {"project_id": "PROJ003", "skill_id": "SK010", "min_level": 3, "priority": "SHOULD"},
+    {
+        "project_id": "PROJ003",
+        "skill_id": "SK010",
+        "min_level": 3,
+        "priority": "SHOULD",
+    },
     {"project_id": "PROJ003", "skill_id": "SK012", "min_level": 2, "priority": "NICE"},
 ]
 
@@ -192,9 +343,17 @@ RELATIONSHIP_COUNT_QUERIES = {
     "OWNED_BY": "MATCH ()-[relationship:OWNED_BY]->() RETURN count(relationship) AS count",
 }
 EXPECTED_COUNTS = {
-    "Teams": 3, "Skills": 12, "Employees": 8, "Projects": 3, "Nodes": 26,
-    "MEMBER_OF": 8, "HAS_SKILL": 33, "WORKS_ON": 8,
-    "REQUIRES_SKILL": 13, "OWNED_BY": 3, "Relationships": 65,
+    "Teams": 3,
+    "Skills": 12,
+    "Employees": 8,
+    "Projects": 3,
+    "Nodes": 26,
+    "MEMBER_OF": 8,
+    "HAS_SKILL": 33,
+    "WORKS_ON": 8,
+    "REQUIRES_SKILL": 13,
+    "OWNED_BY": 3,
+    "Relationships": 65,
 }
 
 BAC_SKILLS_QUERY = """
@@ -279,9 +438,16 @@ def _read_count(session, query):
 
 
 def _database_summary(session):
-    summary = {name: _read_count(session, query) for name, query in NODE_COUNT_QUERIES.items()}
+    summary = {
+        name: _read_count(session, query) for name, query in NODE_COUNT_QUERIES.items()
+    }
     summary["Nodes"] = _read_count(session, "MATCH (node) RETURN count(node) AS count")
-    summary.update({name: _read_count(session, query) for name, query in RELATIONSHIP_COUNT_QUERIES.items()})
+    summary.update(
+        {
+            name: _read_count(session, query)
+            for name, query in RELATIONSHIP_COUNT_QUERIES.items()
+        }
+    )
     summary["Relationships"] = _read_count(
         session, "MATCH ()-[relationship]->() RETURN count(relationship) AS count"
     )
@@ -302,8 +468,13 @@ def _validate_bac_skills(session):
     result = session.run(BAC_SKILLS_QUERY, employee_id="EMP001")
     actual = {record["name"]: record["level"] for record in result}
     expected = {
-        "Python": 4, "FastAPI": 4, "Java": 3, "Spring Boot": 2,
-        "MySQL": 3, "PostgreSQL": 3, "Docker": 3,
+        "Python": 4,
+        "FastAPI": 4,
+        "Java": 3,
+        "Spring Boot": 2,
+        "MySQL": 3,
+        "PostgreSQL": 3,
+        "Docker": 3,
     }
     if actual != expected:
         raise SeedValidationError("EMP001 skill validation failed.")
@@ -312,12 +483,13 @@ def _validate_bac_skills(session):
 def _validate_ecommerce_requirements(session):
     result = session.run(ECOMMERCE_REQUIREMENTS_QUERY, project_id="PROJ001")
     actual = {
-        record["name"]: (record["min_level"], record["priority"])
-        for record in result
+        record["name"]: (record["min_level"], record["priority"]) for record in result
     }
     expected = {
-        "Java": (3, "MUST"), "Spring Boot": (3, "MUST"),
-        "MySQL": (3, "MUST"), "Docker": (3, "SHOULD"),
+        "Java": (3, "MUST"),
+        "Spring Boot": (3, "MUST"),
+        "MySQL": (3, "MUST"),
+        "Docker": (3, "SHOULD"),
         "React": (2, "SHOULD"),
     }
     if actual != expected:
@@ -370,13 +542,10 @@ def _validate_docker_gap_scenario(session):
 
 def _validate_allocation_limits(session):
     overallocated = [
-        record.data()
-        for record in session.run(OVERALLOCATED_EMPLOYEES_QUERY)
+        record.data() for record in session.run(OVERALLOCATED_EMPLOYEES_QUERY)
     ]
     if overallocated:
-        raise SeedValidationError(
-            f"Employee allocation exceeds 100%: {overallocated}"
-        )
+        raise SeedValidationError(f"Employee allocation exceeds 100%: {overallocated}")
 
 
 def _validate_seed(session, summary):
@@ -394,8 +563,12 @@ def _print_summary(summary):
     for name in ("Teams", "Skills", "Employees", "Projects", "Nodes"):
         print(f"  {name}: {summary[name]}")
     for name in (
-        "MEMBER_OF", "HAS_SKILL", "WORKS_ON", "REQUIRES_SKILL",
-        "OWNED_BY", "Relationships",
+        "MEMBER_OF",
+        "HAS_SKILL",
+        "WORKS_ON",
+        "REQUIRES_SKILL",
+        "OWNED_BY",
+        "Relationships",
     ):
         print(f"  {name}: {summary[name]}")
 

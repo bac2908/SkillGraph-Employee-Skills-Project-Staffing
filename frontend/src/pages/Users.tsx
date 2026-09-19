@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, KeyRound, Pencil, ShieldCheck } from 'lucide-react';
 import { useAuth, roleLabel, type Role, type User } from '../auth';
-import { save, useAll, useResource } from '../api';
+import { getAll, save, useAll, useResource } from '../api';
 import type { Page, Project } from '../types';
 import {
   AddButton,
@@ -160,14 +160,19 @@ function UserDirectory() {
           description="Cấp mật khẩu tạm và gửi qua kênh riêng an toàn. Người dùng phải đổi mật khẩu sau khi đăng nhập. Các phiên hiện tại sẽ bị đăng xuất."
           submitLabel="Đặt lại mật khẩu"
           fields={[passwordField]}
+          initialVersion={reset.version ?? '0'}
+          loadLatest={async () => {
+            const user = (await getAll<User>('auth/users')).find(item => item.user_id === reset.user_id);
+            return user ? { ...user } : null;
+          }}
           onClose={() => setReset(null)}
-          onSubmit={async (values) => {
+          onSubmit={async (values, version) => {
             await write(
               () =>
                 save(
                   `/api/auth/users/${encodeURIComponent(reset.user_id)}/password`,
                   'POST',
-                  values,
+                  { ...values, expected_version: version },
                 ),
               'Đã đặt lại mật khẩu và thu hồi phiên cũ.',
             );
@@ -196,6 +201,11 @@ function UserEditor({ existing, onClose }: { existing: User | null; onClose: () 
   const write = useWrite();
   return (
     <FormDialog
+      initialVersion={existing?.version ?? '0'}
+      loadLatest={existing ? async () => {
+        const user = (await getAll<User>('auth/users')).find(item => item.user_id === existing.user_id);
+        return user ? { ...user } : null;
+      } : undefined}
       title={existing ? `Phân quyền ${existing.name}` : 'Thêm tài khoản'}
       description={
         existing
@@ -213,12 +223,12 @@ function UserEditor({ existing, onClose }: { existing: User | null; onClose: () 
       }
       submitDisabled={role === 'MANAGER' && (projects.isPending || !!projects.error)}
       onClose={onClose}
-      onSubmit={async (values) => {
+      onSubmit={async (values, version) => {
         const body = {
           ...values,
           role,
           project_ids: role === 'MANAGER' ? selected : [],
-          ...(existing ? { is_active: active } : {}),
+          ...(existing ? { is_active: active, expected_version: version } : {}),
         };
         await write(
           () =>

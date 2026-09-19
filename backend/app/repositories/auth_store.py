@@ -16,6 +16,10 @@ from uuid import uuid4
 
 from pwdlib import PasswordHash
 
+from app.core.audit import AuditActor
+from app.core.concurrency import check_version
+from app.repositories import account_activity
+
 password_hash = PasswordHash.recommended()
 DUMMY_HASH = password_hash.hash(secrets.token_urlsafe(32))
 
@@ -38,6 +42,7 @@ def csrf_for(token: str) -> str:
 def public_user(row: sqlite3.Row) -> dict:
     return {
         "user_id": row["user_id"],
+        "version": row["version"],
         "email": row["email"],
         "name": row["name"],
         "role": row["role"],
@@ -78,6 +83,24 @@ class AuthStore:
                 );
             """)
 
+            # Additive migration, serialized and atomic; never reset existing users.
+            db.execute("BEGIN IMMEDIATE")
+            if "version" not in {
+                r["name"] for r in db.execute("PRAGMA table_info(users)")
+            }:
+                db.execute(
+                    "ALTER TABLE users ADD COLUMN version TEXT NOT NULL DEFAULT '0'"
+                )
+            db.execute("""CREATE TABLE IF NOT EXISTS account_audit (
+                event_id TEXT PRIMARY KEY, occurred_at TEXT NOT NULL,
+                actor_id TEXT NOT NULL, actor_name TEXT NOT NULL, user_id TEXT NOT NULL,
+                action TEXT NOT NULL, before_json TEXT NOT NULL, after_json TEXT NOT NULL
+            )""")
+            db.execute(
+                "CREATE INDEX IF NOT EXISTS account_audit_time ON account_audit(occurred_at, event_id)"
+            )
+            db.commit()
+
     @contextmanager
     def connection(self):
         db = sqlite3.connect(self.path, timeout=10, isolation_level=None)
@@ -92,7 +115,9 @@ class AuthStore:
         finally:
             db.close()
 
-    def create_user(self, data: dict, *, bootstrap: bool = False) -> dict:
+    def create_user(
+        self, data: dict, *, bootstrap: bool = False, actor: AuditActor | None = None
+    ) -> dict:
         hashed = password_hash.hash(data["password"])
         uid = str(uuid4())
         with self.connection() as db:
@@ -101,7 +126,7 @@ class AuthStore:
                 raise AuthError(409, "Đã có tài khoản. Hãy dùng trang quản trị.")
             try:
                 db.execute(
-                    "INSERT INTO users VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+                    "INSERT INTO users (user_id,email,name,password_hash,role,is_active,must_change_password,project_ids,version) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
                     (
                         uid,
                         data["email"].strip().lower(),
@@ -114,11 +139,20 @@ class AuthStore:
                             if data["role"] == "MANAGER"
                             else []
                         ),
+                        str(uuid4()),
                     ),
                 )
             except sqlite3.IntegrityError as exc:
                 raise AuthError(409, "Email này đã có tài khoản.") from exc
             row = db.execute("SELECT * FROM users WHERE user_id = ?", (uid,)).fetchone()
+            account_activity.write_event(
+                db,
+                actor or AuditActor("LOCAL_SETUP", "Khởi tạo cục bộ"),
+                uid,
+                "CREATED",
+                None,
+                row,
+            )
             db.commit()
         return public_user(row)
 
@@ -236,6 +270,7 @@ class AuthStore:
             ).fetchone()
             if not row:
                 raise AuthError(404, "Không tìm thấy tài khoản.")
+            check_version(dict(row), data.get("expected_version"))
             if user_id == actor_id and (
                 data["role"] != "ADMIN" or not data["is_active"]
             ):
@@ -253,13 +288,14 @@ class AuthStore:
                 if count <= 1:
                     raise AuthError(409, "Phải giữ ít nhất một Admin đang hoạt động.")
             db.execute(
-                "UPDATE users SET role = ?, is_active = ?, project_ids = ? WHERE user_id = ?",
+                "UPDATE users SET role = ?, is_active = ?, project_ids = ?, version = ? WHERE user_id = ?",
                 (
                     data["role"],
                     int(data["is_active"]),
                     json.dumps(
                         data["project_ids"] if data["role"] == "MANAGER" else []
                     ),
+                    str(uuid4()),
                     user_id,
                 ),
             )
@@ -268,27 +304,59 @@ class AuthStore:
             updated = db.execute(
                 "SELECT * FROM users WHERE user_id = ?", (user_id,)
             ).fetchone()
+            actor_row = db.execute(
+                "SELECT name FROM users WHERE user_id=?", (actor_id,)
+            ).fetchone()
+            if actor_row is None:
+                raise AuthError(403, "Không xác định được người thực hiện.")
+            account_activity.write_event(
+                db,
+                AuditActor(actor_id, actor_row["name"]),
+                user_id,
+                "UPDATED",
+                row,
+                updated,
+            )
             db.commit()
         return public_user(updated)
 
-    def reset_password(self, user_id: str, password: str):
+    def reset_password(
+        self,
+        user_id: str,
+        password: str,
+        *,
+        actor: AuditActor,
+        expected_version: str | None = None,
+    ):
         hashed = password_hash.hash(password)
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
+            before = db.execute(
+                "SELECT * FROM users WHERE user_id=?", (user_id,)
+            ).fetchone()
+            if before is None:
+                raise AuthError(404, "Không tìm thấy tài khoản.")
+            check_version(dict(before), expected_version)
             result = db.execute(
-                "UPDATE users SET password_hash = ?, must_change_password = 1 WHERE user_id = ?",
-                (hashed, user_id),
+                "UPDATE users SET password_hash = ?, must_change_password = 1, version = ? WHERE user_id = ?",
+                (hashed, str(uuid4()), user_id),
             )
             if not result.rowcount:
                 raise AuthError(404, "Không tìm thấy tài khoản.")
             db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+            after = db.execute(
+                "SELECT * FROM users WHERE user_id=?", (user_id,)
+            ).fetchone()
+            account_activity.write_event(
+                db, actor, user_id, "PASSWORD_RESET", before, after
+            )
             db.commit()
 
     def change_password(self, user_id: str, current: str, new: str, address: str):
         self.reserve_attempt("password-change:" + user_id, address)
         with self.connection() as db:
             row = db.execute(
-                "SELECT password_hash FROM users WHERE user_id = ?", (user_id,)
+                "SELECT * FROM users WHERE user_id = ?", (user_id,)
             ).fetchone()
         if not row or not password_hash.verify(current, row["password_hash"]):
             raise AuthError(400, "Mật khẩu hiện tại không đúng.")
@@ -298,11 +366,22 @@ class AuthStore:
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             result = db.execute(
-                "UPDATE users SET password_hash = ?, must_change_password = 0 "
+                "UPDATE users SET password_hash = ?, must_change_password = 0, version = ? "
                 "WHERE user_id = ? AND password_hash = ? AND is_active = 1",
-                (hashed, user_id, row["password_hash"]),
+                (hashed, str(uuid4()), user_id, row["password_hash"]),
             )
             if not result.rowcount:
                 raise AuthError(409, "Tài khoản đã thay đổi. Vui lòng đăng nhập lại.")
             db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+            after = db.execute(
+                "SELECT * FROM users WHERE user_id=?", (user_id,)
+            ).fetchone()
+            account_activity.write_event(
+                db,
+                AuditActor(user_id, after["name"]),
+                user_id,
+                "PASSWORD_CHANGED",
+                row,
+                after,
+            )
             db.commit()

@@ -1,11 +1,13 @@
 from neo4j import Transaction
-from neo4j.exceptions import ConstraintError
 
+from app.core.audit import AuditActor
 from app.db.graph import graph_db
-from app.repositories.errors import DuplicateRecordError, RepositoryError
+from app.repositories.errors import RepositoryError
+from app.repositories.node_mutations import mutate_node
 
 SKILL_FIELDS = """
 skill.skill_id AS skill_id,
+coalesce(skill.version, '0') AS version,
 skill.name AS name,
 skill.category AS category
 """
@@ -91,8 +93,7 @@ def _list_skills(
         **parameters,
     ).single()
     items = [
-        record.data()
-        for record in transaction.run(LIST_SKILLS_QUERY, **parameters)
+        record.data() for record in transaction.run(LIST_SKILLS_QUERY, **parameters)
     ]
     return items, total_record["total"] if total_record else 0
 
@@ -141,42 +142,21 @@ def skill_name_exists(
             ).single()
             return bool(record and record["name_exists"])
     except Exception as exc:
-        raise SkillRepositoryError(
-            "Unable to check skill name uniqueness."
-        ) from exc
+        raise SkillRepositoryError("Unable to check skill name uniqueness.") from exc
 
 
-def create_skill(properties: dict) -> dict:
-    try:
-        with graph_db.driver.session() as session:
-            record = session.run(
-                CREATE_SKILL_QUERY,
-                properties=properties,
-            ).single()
-            if record is None:
-                raise SkillRepositoryError("Skill was not created.")
-            return record.data()
-    except ConstraintError as exc:
-        raise DuplicateRecordError("Skill already exists.") from exc
-    except RepositoryError:
-        raise
-    except Exception as exc:
-        raise SkillRepositoryError("Unable to create skill.") from exc
+def create_skill(properties: dict, *, actor: AuditActor) -> dict:
+    return mutate_node("SKILL", properties["skill_id"], "create", properties, actor)
 
 
-def update_skill(skill_id: str, updates: dict) -> dict | None:
-    try:
-        with graph_db.driver.session() as session:
-            record = session.run(
-                UPDATE_SKILL_QUERY,
-                skill_id=skill_id,
-                updates=updates,
-            ).single()
-            return record.data() if record else None
-    except ConstraintError as exc:
-        raise DuplicateRecordError("Skill update is not unique.") from exc
-    except Exception as exc:
-        raise SkillRepositoryError("Unable to update skill.") from exc
+def update_skill(
+    skill_id: str,
+    updates: dict,
+    *,
+    actor: AuditActor,
+    expected_version: str | None = None,
+) -> dict | None:
+    return mutate_node("SKILL", skill_id, "update", updates, actor, expected_version)
 
 
 def _delete_skill(
@@ -196,9 +176,5 @@ def _delete_skill(
     return relationship_count
 
 
-def delete_skill(skill_id: str) -> int | None:
-    try:
-        with graph_db.driver.session() as session:
-            return session.execute_write(_delete_skill, skill_id)
-    except Exception as exc:
-        raise SkillRepositoryError("Unable to delete skill.") from exc
+def delete_skill(skill_id: str, *, actor: AuditActor) -> int | None:
+    return mutate_node("SKILL", skill_id, "delete", {}, actor)

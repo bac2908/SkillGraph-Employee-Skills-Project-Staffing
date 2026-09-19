@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 
+from app.api.auth_dependencies import CurrentUser
+from app.core.audit import AuditActor
 from app.schemas.common import ErrorResponse
 from app.schemas.relationships import (
     EmployeeSkillList,
@@ -57,12 +59,15 @@ def upsert_employee_skill(
     skill_id: SkillPath,
     payload: EmployeeSkillWrite,
     response: Response,
+    user: CurrentUser,
 ) -> dict:
     employee_skill, created = service.upsert(
         employee_id,
         skill_id,
         payload.level,
         payload.years_experience,
+        actor=AuditActor.from_user(user),
+        expected_version=payload.expected_version,
     )
     if created:
         response.status_code = status.HTTP_201_CREATED
@@ -81,6 +86,7 @@ def upsert_employee_skill(
 def delete_employee_skill(
     employee_id: EmployeePath,
     skill_id: SkillPath,
+    user: CurrentUser,
 ) -> Response:
-    service.delete(employee_id, skill_id)
+    service.delete(employee_id, skill_id, actor=AuditActor.from_user(user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

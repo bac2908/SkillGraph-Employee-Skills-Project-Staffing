@@ -129,6 +129,12 @@ export function AssignmentDialog({
   ];
   return (
     <FormDialog
+      initialVersion={currentAssignment?.version ?? (currentAssignment ? '0' : 'absent')}
+      loadLatest={async () => {
+        const data = await request<Items<Assignment>>(`/api/projects/${projectId}/assignments`);
+        const found = data.items.find(item => item.employee_id === selectedId);
+        return found ? { ...found } : null;
+      }}
       title={currentAssignment ? 'Điều chỉnh phân công' : 'Phân công nhân viên'}
       fields={fields}
       submitDisabled={remaining === 0 || !!error || invalidDates}
@@ -151,7 +157,7 @@ export function AssignmentDialog({
         end_date: endDate,
       }}
       onClose={onClose}
-      onSubmit={async (values) => {
+      onSubmit={async (values, version) => {
         const targetId = selectedId || String(values.employee_id);
         const start = String(values.start_date || '');
         const end = String(values.end_date || '');
@@ -166,6 +172,7 @@ export function AssignmentDialog({
         await write(
           () =>
             save(`/api/projects/${projectId}/assignments/${targetId}`, 'PUT', {
+              expected_version: version,
               role: values.role,
               allocation: values.allocation,
               start_date: start || null,
@@ -483,6 +490,13 @@ export function SkillRelations({
       )}
       {edit && (
         <FormDialog
+          initialVersion={edit === 'new' ? 'absent' : edit.version ?? '0'}
+          loadLatest={async () => {
+            const data = await request<Items<EmployeeSkill | Requirement>>(path);
+            const id = edit === 'new' ? '' : edit.skill_id;
+            const found = data.items.find(item => item.skill_id === id);
+            return found ? { ...found } : null;
+          }}
           title={isEmployee ? 'Cập nhật kỹ năng nhân viên' : 'Cập nhật yêu cầu kỹ năng'}
           submitDisabled={skills.isPending || skills.isError || !skills.data?.length}
           fields={skills.data ? fields : []}
@@ -492,11 +506,11 @@ export function SkillRelations({
               : { ...edit }
           }
           onClose={() => setEdit(null)}
-          onSubmit={async (values) => {
+          onSubmit={async (values, version) => {
             if (!skills.data) throw new Error('Danh mục kỹ năng chưa tải xong. Hãy thử lại.');
             const id = edit === 'new' ? String(values.skill_id) : edit.skill_id;
             const { skill_id: _, ...body } = values;
-            await write(() => save(`${path}/${id}`, 'PUT', body));
+            await write(() => save(`${path}/${id}`, 'PUT', { ...body, expected_version: version }));
           }}
         >
           {skills.isPending && <Loading />}

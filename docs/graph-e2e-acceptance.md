@@ -1,5 +1,10 @@
 # Kiểm thử FE → BE → graph thật từ đầu đến cuối
 
+**Tiền kiểm lại 19/09/2026:** `.env.e2e` còn thiếu URI/password; preflight
+exit code 1 trước kết nối. Chưa chạy graph thật. Xem [báo cáo kiểm chứng hệ thống](system-verification.md)
+cho kết quả hồi quy cô lập và các điều kiện để tiếp tục; không thay trạng thái
+nghiệm thu bên dưới bằng kết quả mock.
+
 Ngày cập nhật: **17/09/2026**. Bổ sung bước 10b và thứ tự capacity-first theo
 [allocation theo thời gian](allocation-planning.md). Các báo cáo cũ bên dưới
 thuộc đợt chuẩn bị ban đầu; chưa có kết quả chạy graph thật của bản mới.

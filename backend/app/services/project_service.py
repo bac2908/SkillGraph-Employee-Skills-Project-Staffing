@@ -57,8 +57,16 @@ class ProjectService:
             ) from exc
 
     @staticmethod
-    def update(project_id: str, updates: dict, *, actor: AuditActor) -> dict:
-        project = project_repository.update_project(project_id, updates, actor=actor)
+    def update(
+        project_id: str,
+        updates: dict,
+        *,
+        actor: AuditActor,
+        expected_version: str | None = None,
+    ) -> dict:
+        project = project_repository.update_project(
+            project_id, updates, actor=actor, expected_version=expected_version
+        )
         if project is None:
             raise ResourceNotFoundError("Project", project_id)
         return project

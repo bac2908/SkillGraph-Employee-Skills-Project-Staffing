@@ -1,6 +1,7 @@
 from neo4j import Transaction
 
 from app.core.audit import AuditActor, AuditContext
+from app.core.concurrency import check_version
 from app.db.graph import graph_db
 from app.repositories.activity_repository import write_event
 from app.repositories.errors import RepositoryError
@@ -15,14 +16,13 @@ RETURN project.project_id AS project_id,
        skill.name AS skill_name,
        skill.category AS category,
        requirement.min_level AS min_level,
-       requirement.priority AS priority
+       requirement.priority AS priority,
+       coalesce(requirement.version, '0') AS version
 ORDER BY toLower(skill.name), skill.skill_id
 """
 
 LOCK_PROJECT_REQUIREMENT_QUERY = """
 MATCH (project:Project {project_id: $project_id})
-SET project.project_id = project.project_id
-WITH project
 MATCH (skill:Skill {skill_id: $skill_id})
 OPTIONAL MATCH (project)-[requirement:REQUIRES_SKILL]->(skill)
 RETURN properties(requirement) AS before
@@ -33,14 +33,16 @@ MATCH (project:Project {project_id: $project_id})
 MATCH (skill:Skill {skill_id: $skill_id})
 MERGE (project)-[requirement:REQUIRES_SKILL]->(skill)
 SET requirement.min_level = $min_level,
-    requirement.priority = $priority
+    requirement.priority = $priority,
+    requirement.version = $version
 RETURN project.project_id AS project_id,
        project.name AS project_name,
        skill.skill_id AS skill_id,
        skill.name AS skill_name,
        skill.category AS category,
        requirement.min_level AS min_level,
-       requirement.priority AS priority
+       requirement.priority AS priority,
+       coalesce(requirement.version, '0') AS version
 """
 
 DELETE_PROJECT_REQUIREMENT_QUERY = """
@@ -77,7 +79,12 @@ def _upsert_project_requirement(
     min_level: int,
     priority: str,
     audit: AuditContext,
+    expected_version: str | None = None,
 ) -> tuple[dict, bool]:
+    transaction.run(
+        "MATCH (p:Project {project_id: $project_id}) SET p.project_id = p.project_id",
+        project_id=project_id,
+    ).consume()
     exists_record = transaction.run(
         LOCK_PROJECT_REQUIREMENT_QUERY,
         project_id=project_id,
@@ -91,8 +98,17 @@ def _upsert_project_requirement(
         else None
     )
 
+    check_version(before, expected_version)
+    version = (
+        audit.event_id
+        if before is None
+        or before.get("min_level") != min_level
+        or before.get("priority") != priority
+        else before.get("version", "0")
+    )
     record = transaction.run(
         UPSERT_PROJECT_REQUIREMENT_QUERY,
+        version=version,
         project_id=project_id,
         skill_id=skill_id,
         min_level=min_level,
@@ -120,6 +136,7 @@ def upsert_project_requirement(
     priority: str,
     *,
     actor: AuditActor,
+    expected_version: str | None = None,
 ) -> tuple[dict, bool]:
     audit = AuditContext.create(actor)
     try:
@@ -131,6 +148,7 @@ def upsert_project_requirement(
                 min_level,
                 priority,
                 audit,
+                expected_version,
             )
     except RepositoryError:
         raise
@@ -143,6 +161,10 @@ def upsert_project_requirement(
 def _delete_project_requirement(
     transaction: Transaction, project_id: str, skill_id: str, audit: AuditContext
 ) -> bool:
+    transaction.run(
+        "MATCH (p:Project {project_id: $project_id}) SET p.project_id = p.project_id",
+        project_id=project_id,
+    ).consume()
     existing = transaction.run(
         LOCK_PROJECT_REQUIREMENT_QUERY, project_id=project_id, skill_id=skill_id
     ).single()

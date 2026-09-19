@@ -6,8 +6,9 @@ import { useAuth } from '../auth';
 import type { ActivityEvent, ActivityPage } from '../types';
 import { Avatar, Empty, ErrorNotice, Loading, PageHeading } from './ui';
 
-const actions = { CREATED: 'Đã tạo', UPDATED: 'Đã cập nhật', DELETED: 'Đã xóa' };
+const actions = { CREATED: 'Đã tạo', UPDATED: 'Đã cập nhật', DELETED: 'Đã xóa', PASSWORD_RESET: 'Đặt lại mật khẩu', PASSWORD_CHANGED: 'Đổi mật khẩu', ADMIN_RECOVERED: 'Khôi phục Admin' };
 const kinds = {
+  EMPLOYEE: 'Hồ sơ nhân viên', SKILL: 'Danh mục kỹ năng', HAS_SKILL: 'Kỹ năng nhân viên', ACCOUNT: 'Tài khoản và quyền',
   PROJECT: 'Thông tin dự án',
   WORKS_ON: 'Phân công nhân sự',
   REQUIRES_SKILL: 'Yêu cầu kỹ năng',
@@ -16,7 +17,8 @@ const fields: Record<string, string> = {
   project_id: 'Mã dự án',
   employee_id: 'Mã nhân viên',
   skill_id: 'Mã kỹ năng',
-  name: 'Tên dự án',
+  name: 'Tên',
+  email: 'Email', title: 'Chức danh', seniority: 'Cấp bậc', location: 'Địa điểm', category: 'Nhóm kỹ năng', level: 'Cấp độ', years_experience: 'Kinh nghiệm (năm)', is_active: 'Hoạt động', must_change_password: 'Buộc đổi mật khẩu', project_ids: 'Dự án quản lý', user_id: 'Mã tài khoản',
   description: 'Mô tả',
   status: 'Trạng thái',
   role: 'Vai trò',
@@ -37,6 +39,7 @@ const initialFilters = {
 
 export function ActivityPageView() {
   const { isAdmin } = useAuth();
+  const [source, setSource] = useState<'graph' | 'accounts'>('graph');
   if (!isAdmin)
     return (
       <Empty title="Bạn không có quyền truy cập" detail="Chỉ Admin được xem nhật ký hoạt động." />
@@ -44,11 +47,15 @@ export function ActivityPageView() {
   return (
     <>
       <PageHeading
-        eyebrow="NHẬT KÝ DỰ ÁN"
+        eyebrow="NHẬT KÝ HOẠT ĐỘNG"
         title="Mỗi thay đổi, một dấu vết."
-        description="Theo dõi người thực hiện và nội dung thay đổi, kể cả dự án đã bị xóa."
+        description="Nhật ký nghiệp vụ và tài khoản được lưu ở hai kho riêng; không có thứ tự transaction chung."
       />
-      <ActivityFeed />
+      <div className="activity-source" role="group" aria-label="Nguồn nhật ký">
+        <button className="button secondary" aria-pressed={source === 'graph'} onClick={() => setSource('graph')}>Nghiệp vụ graph</button>
+        <button className="button secondary" aria-pressed={source === 'accounts'} onClick={() => setSource('accounts')}>Tài khoản và quyền</button>
+      </div>
+      <ActivityContent key={source} source={source} />
     </>
   );
 }
@@ -59,12 +66,12 @@ export function ActivityFeed({ projectId }: { projectId?: string }) {
   return isAdmin ? <ActivityContent key={projectId || 'all'} projectId={projectId} /> : null;
 }
 
-function ActivityContent({ projectId }: { projectId?: string }) {
+function ActivityContent({ projectId, source = 'graph' }: { projectId?: string; source?: 'graph' | 'accounts' }) {
   const [draft, setDraft] = useState(initialFilters);
   const [filters, setFilters] = useState(initialFilters);
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const [formError, setFormError] = useState<string | null>(null);
-  const params = new URLSearchParams({ limit: '20' });
+  const params = new URLSearchParams({ limit: '20', ...(source === 'accounts' ? { source } : {}) });
   for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
   if (projectId) params.set('project_id', projectId);
   const cursor = cursors[cursors.length - 1];
@@ -93,8 +100,7 @@ function ActivityContent({ projectId }: { projectId?: string }) {
       <div className="activity-intro">
         <History size={22} aria-hidden="true" />
         <p>
-          Chỉ ghi thay đổi từ khi tính năng được bật: thông tin dự án, phân công và yêu cầu kỹ năng.
-          Không khôi phục lịch sử cũ.
+          {source === 'accounts' ? 'Nhật ký tài khoản, quyền và sự kiện đổi/reset mật khẩu; không lưu mật khẩu hoặc token.' : 'Nhật ký nhân viên, kỹ năng, dự án và các quan hệ. Chỉ ghi từ khi từng tính năng được bật; không khôi phục lịch sử cũ.'}
         </p>
         <button
           className="button secondary"
@@ -110,7 +116,7 @@ function ActivityContent({ projectId }: { projectId?: string }) {
         </button>
       </div>
       <form className="activity-filters" onSubmit={applyFilters}>
-        {!projectId && (
+        {!projectId && source === 'graph' && (
           <label>
             Mã dự án
             <input
@@ -142,20 +148,20 @@ function ActivityContent({ projectId }: { projectId?: string }) {
             ))}
           </select>
         </label>
-        <label>
+        {source === 'graph' && <label>
           Loại thay đổi
           <select
             value={draft.resource_type}
             onChange={(e) => update('resource_type', e.target.value)}
           >
             <option value="">Tất cả loại</option>
-            {Object.entries(kinds).map(([value, name]) => (
+            {Object.entries(kinds).filter(([value]) => value !== 'ACCOUNT' && (!projectId || ['PROJECT','WORKS_ON','REQUIRES_SKILL'].includes(value))).map(([value, name]) => (
               <option key={value} value={value}>
                 {name}
               </option>
             ))}
           </select>
-        </label>
+        </label>}
         <label>
           Từ thời điểm
           <input
@@ -262,7 +268,7 @@ function ActivityItem({ item, showProject }: { item: ActivityEvent; showProject:
           {kinds[item.resource_type]}
         </p>
         <small className="activity-resource">{item.resource_id}</small>
-        {showProject && (
+        {showProject && item.project_id && (
           <Link
             className="text-link"
             to={`/projects/${encodeURIComponent(item.project_id)}?tab=activity`}

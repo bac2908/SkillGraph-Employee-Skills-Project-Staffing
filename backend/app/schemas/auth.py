@@ -39,6 +39,7 @@ class UserCreate(AuthModel):
 
 
 class UserUpdate(AuthModel):
+    expected_version: str | None = Field(default=None, max_length=64)
     role: Role
     is_active: bool
     project_ids: list[str] = Field(default_factory=list, max_length=100)
@@ -54,10 +55,12 @@ class PasswordChange(AuthModel):
 
 
 class PasswordReset(AuthModel):
+    expected_version: str | None = Field(default=None, max_length=64)
     password: SecretStr = Field(min_length=15, max_length=128)
 
 
 class UserRead(AuthModel):
+    version: str = "0"
     user_id: str
     email: str
     name: str

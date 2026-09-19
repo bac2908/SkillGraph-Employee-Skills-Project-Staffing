@@ -1,6 +1,6 @@
-from neo4j import Transaction
-
+from app.core.audit import AuditActor
 from app.db.graph import graph_db
+from app.repositories.employee_skill_mutations import mutate
 from app.repositories.errors import RepositoryError
 
 LIST_EMPLOYEE_SKILLS_QUERY = """
@@ -13,7 +13,8 @@ RETURN employee.employee_id AS employee_id,
        skill.name AS skill_name,
        skill.category AS category,
        employee_skill.level AS level,
-       employee_skill.years_experience AS years_experience
+       employee_skill.years_experience AS years_experience,
+       coalesce(employee_skill.version, '0') AS version
 ORDER BY toLower(skill.name), skill.skill_id
 """
 
@@ -61,37 +62,7 @@ def list_employee_skills(employee_id: str) -> list[dict]:
             )
             return [record.data() for record in result]
     except Exception as exc:
-        raise EmployeeSkillRepositoryError(
-            "Unable to list employee skills."
-        ) from exc
-
-
-def _upsert_employee_skill(
-    transaction: Transaction,
-    employee_id: str,
-    skill_id: str,
-    level: int,
-    years_experience: float,
-) -> tuple[dict, bool]:
-    exists_record = transaction.run(
-        EMPLOYEE_SKILL_EXISTS_QUERY,
-        employee_id=employee_id,
-        skill_id=skill_id,
-    ).single()
-    relationship_exists = bool(
-        exists_record and exists_record["relationship_exists"]
-    )
-
-    record = transaction.run(
-        UPSERT_EMPLOYEE_SKILL_QUERY,
-        employee_id=employee_id,
-        skill_id=skill_id,
-        level=level,
-        years_experience=years_experience,
-    ).single()
-    if record is None:
-        raise EmployeeSkillRepositoryError("Employee skill was not saved.")
-    return record.data(), not relationship_exists
+        raise EmployeeSkillRepositoryError("Unable to list employee skills.") from exc
 
 
 def upsert_employee_skill(
@@ -99,34 +70,20 @@ def upsert_employee_skill(
     skill_id: str,
     level: int,
     years_experience: float,
-) -> tuple[dict, bool]:
-    try:
-        with graph_db.driver.session() as session:
-            return session.execute_write(
-                _upsert_employee_skill,
-                employee_id,
-                skill_id,
-                level,
-                years_experience,
-            )
-    except RepositoryError:
-        raise
-    except Exception as exc:
-        raise EmployeeSkillRepositoryError(
-            "Unable to save employee skill."
-        ) from exc
+    *,
+    actor: AuditActor,
+    expected_version: str | None = None,
+):
+    return mutate(
+        employee_id,
+        skill_id,
+        {"level": level, "years_experience": years_experience},
+        actor,
+        expected_version,
+    )
 
 
-def delete_employee_skill(employee_id: str, skill_id: str) -> bool:
-    try:
-        with graph_db.driver.session() as session:
-            record = session.run(
-                DELETE_EMPLOYEE_SKILL_QUERY,
-                employee_id=employee_id,
-                skill_id=skill_id,
-            ).single()
-            return bool(record and record["deleted"])
-    except Exception as exc:
-        raise EmployeeSkillRepositoryError(
-            "Unable to delete employee skill."
-        ) from exc
+def delete_employee_skill(
+    employee_id: str, skill_id: str, *, actor: AuditActor
+) -> bool:
+    return mutate(employee_id, skill_id, None, actor)

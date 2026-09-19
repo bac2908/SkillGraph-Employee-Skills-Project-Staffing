@@ -10,9 +10,11 @@ class APIModel(BaseModel):
 
 
 class PartialUpdateModel(APIModel):
+    expected_version: str | None = None
+
     @model_validator(mode="after")
     def require_non_null_changes(self):
-        if not self.model_fields_set:
+        if not (self.model_fields_set - {"expected_version"}):
             raise ValueError("At least one field must be provided.")
 
         null_fields = [

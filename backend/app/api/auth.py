@@ -9,6 +9,7 @@ from app.api.auth_dependencies import (
     Store,
     verify_origin,
 )
+from app.core.audit import AuditActor
 from app.core.config import settings
 from app.repositories.auth_store import csrf_for
 from app.schemas.auth import (
@@ -113,7 +114,7 @@ def create_user(payload: UserCreate, store: Store, admin: Admin):
     validate_grants(payload.role, payload.project_ids)
     data = payload.model_dump(exclude={"password"})
     data["password"] = payload.password.get_secret_value()
-    return store.create_user(data)
+    return store.create_user(data, actor=AuditActor.from_user(admin))
 
 
 @router.patch("/users/{user_id}", response_model=UserRead)
@@ -126,4 +127,9 @@ def update_user(user_id: str, payload: UserUpdate, store: Store, admin: Admin):
 def reset_password(user_id: str, payload: PasswordReset, store: Store, admin: Admin):
     if user_id == admin["user_id"]:
         raise HTTPException(409, "Hãy dùng chức năng đổi mật khẩu của bạn.")
-    store.reset_password(user_id, payload.password.get_secret_value())
+    store.reset_password(
+        user_id,
+        payload.password.get_secret_value(),
+        actor=AuditActor.from_user(admin),
+        expected_version=payload.expected_version,
+    )

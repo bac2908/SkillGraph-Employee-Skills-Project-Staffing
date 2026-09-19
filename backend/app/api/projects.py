@@ -102,7 +102,10 @@ def update_project(
 ) -> dict:
     return project_service.update(
         project_id,
-        payload.model_dump(exclude_unset=True, mode="json"),
+        payload.model_dump(
+            exclude_unset=True, exclude={"expected_version"}, mode="json"
+        ),
+        expected_version=payload.expected_version,
         actor=AuditActor.from_user(user),
     )
 

@@ -1,5 +1,10 @@
 # Sao lưu và phục hồi dữ liệu SkillGraph
 
+**Tiền kiểm lại 19/09/2026:** `.env.restore` còn thiếu URI/password của đích;
+chưa tạo backup nguồn hoặc phục hồi graph trong đợt này. Cần chốt thời điểm
+dừng mọi writer. Xem [báo cáo kiểm chứng hệ thống](system-verification.md) để
+phân biệt kết quả hồi quy SQLite/mock với drill phục hồi thật còn mở.
+
 Triển khai ngày 11/09/2026. Phạm vi: bộ công cụ backup logic có giới hạn cho bản
 local, kiểm tra file và phục hồi vào **nơi riêng chưa có dữ liệu**. Không triển
 khai production, không ghi đè DB đang dùng, không tự đăng ký dịch vụ hoặc lịch

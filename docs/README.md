@@ -22,6 +22,7 @@ tính năng. Quy ước này được lưu ở [AGENTS.md](../AGENTS.md).
 | [Nâng cấp giao diện UI/UX](ui-redesign.md) | Thiết kế mới Emerald Glassmorphic, typography, màu sắc và E2E |
 | [Đăng nhập và phân quyền](authentication.md) | Admin/Manager/Viewer, session, CSRF, SQLite và giới hạn triển khai |
 | [Nghiệm thu ba role](rbac-acceptance.md) | Kết quả UI + API Admin/Manager/Viewer, thu hồi phiên, buộc đổi mật khẩu; phạm vi cô lập và giới hạn graph thật |
+| [Kiểm chứng hệ thống — 19/09](system-verification.md) | Tiền kiểm cấu hình test, hồi quy cô lập, điều kiện chạy graph/restore thật và phạm vi đo tải còn mở |
 | [Nghiệm thu FE–BE–graph thật](graph-e2e-acceptance.md) | Bộ test 13 bước, đích riêng, dữ liệu kỳ vọng và cleanup; đang chờ cấu hình/chạy thật |
 | [Khôi phục Admin](admin-recovery.md) | CLI cục bộ, xác nhận tài khoản, mật khẩu tạm nhập ẩn, thu hồi phiên và giới hạn an toàn |
 | [Dashboard tổng hợp](dashboard.md) | API tổng hợp, dữ liệu có giới hạn, cách tải và kiểm thử |

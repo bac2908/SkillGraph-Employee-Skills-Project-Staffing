@@ -42,3 +42,4 @@ class ProjectUpdate(PartialUpdateModel):
 
 class ProjectRead(ProjectFields):
     project_id: ProjectId
+    version: str = "0"

@@ -253,6 +253,8 @@ export function Directory({ resource }: { resource: Resource }) {
               ? 'Bước 1: tạo thông tin dự án. Sau khi lưu, khai báo yêu cầu kỹ năng rồi xem ứng viên nội bộ; mô tả không được tự phân tích thành kỹ năng.'
               : undefined
           }
+          initialVersion={edit === 'new' ? undefined : String(edit.version ?? '0')}
+          loadLatest={edit === 'new' ? undefined : () => request<Entity>(`/api/${resource}/${edit[config.id]}`)}
           fields={config.fields.map((f) => ({
             ...f,
             disabled: edit !== 'new' && f.name === config.id,
@@ -263,12 +265,12 @@ export function Directory({ resource }: { resource: Resource }) {
               : edit
           }
           onClose={() => setEdit(null)}
-          onSubmit={async (values) => {
+          onSubmit={async (values, version) => {
             await write(async () => {
               const saved = await save<Entity>(
                 `/api/${resource}${edit === 'new' ? '' : `/${edit[config.id]}`}`,
                 edit === 'new' ? 'POST' : 'PATCH',
-                values,
+                edit === 'new' ? values : { ...values, expected_version: version },
               );
               if (resource === 'projects' && edit === 'new')
                 setCreatedProject({ id: String(saved.project_id), name: saved.name });

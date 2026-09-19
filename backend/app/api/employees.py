@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response, status
 
+from app.api.auth_dependencies import CurrentUser
+from app.core.audit import AuditActor
 from app.schemas.common import ErrorResponse, Page
 from app.schemas.employee import (
     EmployeeCreate,
@@ -56,8 +58,10 @@ def list_employees(
         503: {"model": ErrorResponse},
     },
 )
-def create_employee(payload: EmployeeCreate) -> dict:
-    return service.create(payload.model_dump(mode="json"))
+def create_employee(payload: EmployeeCreate, user: CurrentUser) -> dict:
+    return service.create(
+        payload.model_dump(mode="json"), actor=AuditActor.from_user(user)
+    )
 
 
 @router.get(
@@ -86,10 +90,15 @@ def get_employee(employee_id: EmployeePath) -> dict:
 def update_employee(
     employee_id: EmployeePath,
     payload: EmployeeUpdate,
+    user: CurrentUser,
 ) -> dict:
     return service.update(
         employee_id,
-        payload.model_dump(exclude_unset=True, mode="json"),
+        payload.model_dump(
+            exclude_unset=True, exclude={"expected_version"}, mode="json"
+        ),
+        actor=AuditActor.from_user(user),
+        expected_version=payload.expected_version,
     )
 
 
@@ -103,6 +112,6 @@ def update_employee(
         503: {"model": ErrorResponse},
     },
 )
-def delete_employee(employee_id: EmployeePath) -> Response:
-    service.delete(employee_id)
+def delete_employee(employee_id: EmployeePath, user: CurrentUser) -> Response:
+    service.delete(employee_id, actor=AuditActor.from_user(user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

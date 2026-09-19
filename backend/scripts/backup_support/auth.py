@@ -5,7 +5,7 @@ from contextlib import closing
 from pathlib import Path
 from time import monotonic
 
-from app.db.auth_schema import AUTH_COLUMNS
+from app.db.auth_schema import AUTH_COLUMNS, AUTH_LEGACY_COLUMNS
 from scripts.backup_support import BackupError
 from scripts.backup_support.files import MAX_FILE_BYTES, json_bytes, reserve_file
 
@@ -32,17 +32,24 @@ def inspect_auth(path: Path) -> dict:
                 "SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"
             )
         )
-        expected = {("table", table) for table in AUTH_COLUMNS} | {
+        columns_by_table = (
+            AUTH_COLUMNS
+            if ("table", "account_audit") in objects
+            else AUTH_LEGACY_COLUMNS
+        )
+        expected = {("table", table) for table in columns_by_table} | {
             ("index", "sessions_user")
         }
+        if columns_by_table is AUTH_COLUMNS:
+            expected.add(("index", "account_audit_time"))
         if objects != expected:
             raise BackupError(
                 "Unsupported auth schema; use a matching application version."
             )
-        for table, columns in AUTH_COLUMNS.items():
+        for table, columns in columns_by_table.items():
             db.execute(f"SELECT {columns} FROM {table} LIMIT 0")
         rows = db.execute(
-            f"SELECT {AUTH_COLUMNS['users']} FROM users ORDER BY user_id"
+            f"SELECT {columns_by_table['users']} FROM users ORDER BY user_id"
         ).fetchall()
         if not any(row[4] == "ADMIN" and row[5] == 1 for row in rows):
             raise BackupError("Auth backup has no active Admin.")
@@ -55,7 +62,14 @@ def inspect_auth(path: Path) -> dict:
                 raise BackupError("Invalid project grants in auth backup.")
             if row[4] == "MANAGER":
                 grants.extend(ids)
+        audit_rows = (
+            db.execute("SELECT * FROM account_audit ORDER BY event_id").fetchall()
+            if columns_by_table is AUTH_COLUMNS
+            else []
+        )
         return {
+            "account_audit_count": len(audit_rows),
+            "account_audit_sha256": hashlib.sha256(json_bytes(audit_rows)).hexdigest(),
             "users": len(rows),
             "users_sha256": hashlib.sha256(json_bytes(rows)).hexdigest(),
             "sessions": db.execute("SELECT count(*) FROM sessions").fetchone()[0],
@@ -100,6 +114,7 @@ def copy_auth(source: Path, destination: Path, *, revoke_sessions=False):
         restored = inspect_auth(destination)
         if (
             restored["users_sha256"] != original["users_sha256"]
+            or restored["account_audit_sha256"] != original["account_audit_sha256"]
             or restored["sessions"]
             or restored["login_limits"]
         ):

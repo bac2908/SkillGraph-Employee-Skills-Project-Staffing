@@ -1,3 +1,4 @@
+import { ApiError } from '../api';
 import {
   createContext,
   useContext,
@@ -258,6 +259,8 @@ export function FormDialog({
   danger = false,
   submitDisabled = false,
   onSubmit,
+  initialVersion,
+  loadLatest,
   onClose,
   onFieldChange,
   children,
@@ -269,7 +272,9 @@ export function FormDialog({
   submitLabel?: string;
   danger?: boolean;
   submitDisabled?: boolean;
-  onSubmit: (values: Record<string, unknown>) => Promise<void>;
+  initialVersion?: string;
+  loadLatest?: () => Promise<Record<string, unknown> | null>;
+  onSubmit: (values: Record<string, unknown>, version?: string) => Promise<void>;
   onClose: () => void;
   onFieldChange?: (name: string, value: string) => void;
   children?: ReactNode;
@@ -279,6 +284,11 @@ export function FormDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const submitting = useRef(false);
+  const [version, setVersion] = useState(initialVersion);
+  const [latest, setLatest] = useState<Record<string, unknown> | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState<unknown>(null);
+  const stale = error instanceof ApiError && error.code === 'stale_version';
   useLayoutEffect(() => {
     const dialog = ref.current!;
     const opener = document.activeElement;
@@ -303,7 +313,7 @@ export function FormDialog({
       <form
         onSubmit={async (event) => {
           event.preventDefault();
-          if (submitting.current || submitDisabled) return;
+          if (submitting.current || submitDisabled || stale || reviewing) return;
           const form = new FormData(event.currentTarget);
           const values = Object.fromEntries(
             fields
@@ -321,10 +331,11 @@ export function FormDialog({
           setPending(true);
           setError(null);
           try {
-            await onSubmit(values);
+            await onSubmit(values, version);
             onClose();
           } catch (err) {
             setError(err);
+            setLatest(null);
             submitting.current = false;
             setPending(false);
           }
@@ -406,6 +417,36 @@ export function FormDialog({
           ))}
         </fieldset>
         {error != null && <ErrorNotice error={error} focus />}
+        {stale && loadLatest && (
+          <section className="conflict-review" aria-label="Đối chiếu dữ liệu mới">
+            <p>Bản nháp vẫn ở các ô phía trên. Xem bản hiện tại trước khi quyết định lưu; không tự hợp nhất dữ liệu.</p>
+            <button type="button" className="button secondary" disabled={reviewing}
+              onClick={async () => {
+                setReviewing(true); setReviewError(null); setLatest(null);
+                try {
+                  const value = await loadLatest();
+                  if (!value) throw new Error('Bản ghi đã bị xóa. Giữ lại nội dung cần thiết rồi đóng biểu mẫu; không tự tạo lại.');
+                  setLatest(value);
+                } catch (err) { setReviewError(err); }
+                finally { setReviewing(false); }
+              }}>Xem bản mới trên máy chủ</button>
+            {reviewError != null && <ErrorNotice error={reviewError} />}
+            {latest && (
+              <>
+                <div className="table-scroll"><table aria-label="Bản hiện tại trên máy chủ">
+                  <thead><tr><th>Trường</th><th>Giá trị hiện tại</th></tr></thead>
+                  <tbody>{Object.entries(latest).filter(([key]) => !['version','expected_version'].includes(key)).map(([key, value]) => (
+                    <tr key={key}><th>{fields.find(f => f.name === key)?.label || key}</th><td>{Array.isArray(value) ? value.join(', ') : String(value ?? '—')}</td></tr>
+                  ))}</tbody>
+                </table></div>
+                <p>Nếu tiếp tục, lần Lưu tiếp theo sẽ áp dụng nội dung đang nhập lên bản này. Hãy sửa các ô cần giữ theo bản mới trước khi lưu.</p>
+                <button type="button" className="button secondary" onClick={() => {
+                  setVersion(String(latest.version ?? '0')); setError(null); setLatest(null);
+                }}>Đã đối chiếu — giữ bản nháp để lưu lại</button>
+              </>
+            )}
+          </section>
+        )}
         <div className="dialog-footer">
           <button type="button" className="button secondary" disabled={pending} onClick={onClose}>
             Hủy
@@ -413,7 +454,7 @@ export function FormDialog({
           <button
             type="submit"
             className={`button ${danger ? 'danger' : 'primary'}`}
-            disabled={pending || submitDisabled}
+            disabled={pending || submitDisabled || stale || reviewing}
           >
             {pending && <LoaderCircle size={16} className="spin" />}
             {pending ? 'Đang lưu…' : submitLabel}

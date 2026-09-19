@@ -1,3 +1,4 @@
+from app.core.audit import AuditActor
 from app.core.exceptions import (
     ResourceAlreadyExistsError,
     ResourceInUseError,
@@ -38,7 +39,7 @@ class SkillService:
         return skill
 
     @staticmethod
-    def create(properties: dict) -> dict:
+    def create(properties: dict, *, actor: AuditActor) -> dict:
         skill_id = properties["skill_id"]
         if skill_repository.get_skill(skill_id) is not None:
             raise ResourceAlreadyExistsError("Skill", "skill_id", skill_id)
@@ -50,7 +51,7 @@ class SkillService:
             )
 
         try:
-            return skill_repository.create_skill(properties)
+            return skill_repository.create_skill(properties, actor=actor)
         except DuplicateRecordError as exc:
             raise ResourceAlreadyExistsError(
                 "Skill",
@@ -59,7 +60,13 @@ class SkillService:
             ) from exc
 
     @staticmethod
-    def update(skill_id: str, updates: dict) -> dict:
+    def update(
+        skill_id: str,
+        updates: dict,
+        *,
+        actor: AuditActor,
+        expected_version: str | None = None,
+    ) -> dict:
         skill = skill_repository.get_skill(skill_id)
         if skill is None:
             raise ResourceNotFoundError("Skill", skill_id)
@@ -85,8 +92,8 @@ class SkillService:
         return updated_skill
 
     @staticmethod
-    def delete(skill_id: str) -> None:
-        relationship_count = skill_repository.delete_skill(skill_id)
+    def delete(skill_id: str, *, actor: AuditActor) -> None:
+        relationship_count = skill_repository.delete_skill(skill_id, actor=actor)
         if relationship_count is None:
             raise ResourceNotFoundError("Skill", skill_id)
         if relationship_count > 0:

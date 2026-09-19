@@ -12,6 +12,7 @@ import { ApiError, request, save, setCsrfToken } from './api';
 
 export type Role = 'ADMIN' | 'MANAGER' | 'VIEWER';
 export interface User {
+  version?: string;
   user_id: string;
   name: string;
   email: string;

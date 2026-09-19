@@ -1,4 +1,5 @@
 export interface Employee {
+  version?: string;
   employee_id: string;
   name: string;
   email: string;
@@ -8,11 +9,13 @@ export interface Employee {
   location: string;
 }
 export interface Skill {
+  version?: string;
   skill_id: string;
   name: string;
   category: string;
 }
 export interface Project {
+  version?: string;
   project_id: string;
   name: string;
   description: string;
@@ -23,12 +26,12 @@ export interface ActivityEvent {
   occurred_at: string;
   actor_id: string;
   actor_name: string;
-  project_id: string;
-  action: 'CREATED' | 'UPDATED' | 'DELETED';
-  resource_type: 'PROJECT' | 'WORKS_ON' | 'REQUIRES_SKILL';
+  project_id: string | null;
+  action: 'CREATED' | 'UPDATED' | 'DELETED' | 'PASSWORD_RESET' | 'PASSWORD_CHANGED' | 'ADMIN_RECOVERED';
+  resource_type: 'PROJECT' | 'WORKS_ON' | 'REQUIRES_SKILL' | 'EMPLOYEE' | 'SKILL' | 'HAS_SKILL' | 'ACCOUNT';
   resource_id: string;
-  before: Record<string, string | number | null> | null;
-  after: Record<string, string | number | null> | null;
+  before: Record<string, string | number | boolean | string[] | null> | null;
+  after: Record<string, string | number | boolean | string[] | null> | null;
 }
 export interface ActivityPage {
   items: ActivityEvent[];
@@ -63,6 +66,7 @@ export interface Items<T> {
   total: number;
 }
 export interface EmployeeSkill {
+  version?: string;
   employee_id: string;
   employee_name: string;
   skill_id: string;
@@ -72,6 +76,7 @@ export interface EmployeeSkill {
   years_experience: number;
 }
 export interface Assignment {
+  version?: string;
   project_id: string;
   project_name: string;
   employee_id: string;
@@ -87,6 +92,7 @@ export interface Assignment {
   employee_remaining_allocation: number;
 }
 export interface Requirement {
+  version?: string;
   project_id: string;
   project_name: string;
   skill_id: string;

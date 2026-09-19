@@ -19,11 +19,13 @@ AssignmentRole = Annotated[
 
 
 class EmployeeSkillWrite(APIModel):
+    expected_version: str | None = Field(default=None, max_length=64)
     level: SkillLevel = Field(examples=[4])
     years_experience: YearsExperience = Field(examples=[2])
 
 
 class EmployeeSkillRead(EmployeeSkillWrite):
+    version: str = "0"
     employee_id: EmployeeId
     employee_name: str
     skill_id: SkillId
@@ -37,6 +39,7 @@ class EmployeeSkillList(APIModel):
 
 
 class ProjectAssignmentWrite(APIModel):
+    expected_version: str | None = Field(default=None, max_length=64)
     role: AssignmentRole = Field(examples=["Backend Developer"])
     allocation: AllocationPercent = Field(
         description="Percentage of the employee's capacity assigned here.",
@@ -57,6 +60,7 @@ class ProjectAssignmentWrite(APIModel):
 
 
 class ProjectAssignmentRead(ProjectAssignmentWrite):
+    version: str = "0"
     project_id: ProjectId
     project_name: str
     employee_id: EmployeeId
@@ -78,11 +82,13 @@ class ProjectAssignmentList(APIModel):
 
 
 class ProjectRequirementWrite(APIModel):
+    expected_version: str | None = Field(default=None, max_length=64)
     min_level: SkillLevel = Field(examples=[3])
     priority: SkillPriority = Field(examples=["MUST"])
 
 
 class ProjectRequirementRead(ProjectRequirementWrite):
+    version: str = "0"
     project_id: ProjectId
     project_name: str
     skill_id: SkillId

@@ -71,6 +71,7 @@ def upsert_project_assignment(
         payload.role,
         payload.allocation,
         actor=AuditActor.from_user(user),
+        expected_version=payload.expected_version,
         start_date=payload.start_date.isoformat() if payload.start_date else None,
         end_date=payload.end_date.isoformat() if payload.end_date else None,
     )

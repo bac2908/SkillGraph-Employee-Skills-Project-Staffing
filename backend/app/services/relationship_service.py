@@ -41,6 +41,9 @@ class EmployeeSkillService:
         skill_id: str,
         level: int,
         years_experience: float,
+        *,
+        actor: AuditActor,
+        expected_version: str | None = None,
     ) -> tuple[dict, bool]:
         _require_employee(employee_id)
         _require_skill(skill_id)
@@ -49,15 +52,18 @@ class EmployeeSkillService:
             skill_id,
             level,
             years_experience,
+            actor=actor,
+            expected_version=expected_version,
         )
 
     @staticmethod
-    def delete(employee_id: str, skill_id: str) -> None:
+    def delete(employee_id: str, skill_id: str, *, actor: AuditActor) -> None:
         _require_employee(employee_id)
         _require_skill(skill_id)
         deleted = employee_skill_repository.delete_employee_skill(
             employee_id,
             skill_id,
+            actor=actor,
         )
         if not deleted:
             raise ResourceNotFoundError(
@@ -81,6 +87,7 @@ class ProjectAssignmentService:
         allocation: int,
         *,
         actor: AuditActor,
+        expected_version: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> tuple[dict, bool]:
@@ -92,6 +99,7 @@ class ProjectAssignmentService:
             role,
             allocation,
             actor=actor,
+            expected_version=expected_version,
             start_date=start_date,
             end_date=end_date,
         )
@@ -137,6 +145,7 @@ class ProjectRequirementService:
         priority: str,
         *,
         actor: AuditActor,
+        expected_version: str | None = None,
     ) -> tuple[dict, bool]:
         _require_project(project_id)
         _require_skill(skill_id)
@@ -146,6 +155,7 @@ class ProjectRequirementService:
             min_level,
             priority,
             actor=actor,
+            expected_version=expected_version,
         )
 
     @staticmethod

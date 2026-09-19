@@ -8,6 +8,17 @@ from app.repositories.errors import RepositoryError
 
 # Explicit allowlists exclude passwords, email, tokens and unrelated node fields.
 SNAPSHOT_FIELDS = {
+    "EMPLOYEE": (
+        "employee_id",
+        "name",
+        "email",
+        "title",
+        "seniority",
+        "status",
+        "location",
+    ),
+    "SKILL": ("skill_id", "name", "category"),
+    "HAS_SKILL": ("employee_id", "skill_id", "level", "years_experience"),
     "PROJECT": ("project_id", "name", "description", "status"),
     "WORKS_ON": (
         "project_id",
@@ -66,7 +77,7 @@ def snapshot(kind: str, value: dict | None) -> dict | None:
 def write_event(
     transaction: Transaction,
     context: AuditContext,
-    project_id: str,
+    project_id: str | None,
     resource_type: str,
     resource_id: str,
     before: dict | None,

@@ -1,3 +1,8 @@
+from uuid import uuid4
+
+from app.core.audit import AuditActor
+from app.repositories import account_activity
+
 """Interactive, local-only recovery of an existing active Admin.
 
 No AuthStore construction, graph connection, migrations, HTTP route or password
@@ -101,7 +106,10 @@ def _validate_schema(db: sqlite3.Connection):
             "SELECT type, name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"
         )
     }
-    expected = {("table", name) for name in AUTH_COLUMNS} | {("index", "sessions_user")}
+    expected = {("table", name) for name in AUTH_COLUMNS} | {
+        ("index", "sessions_user"),
+        ("index", "account_audit_time"),
+    }
     if objects != expected:
         raise RecoveryError("Schema auth không được hỗ trợ. Không tự migration.")
     for table, columns in AUTH_COLUMNS.items():
@@ -187,9 +195,9 @@ def recover_admin(target: RecoveryTarget, password: str) -> RecoveryResult:
         if password_hash.verify(password, row["password_hash"]):
             raise RecoveryError("Mật khẩu khôi phục phải khác mật khẩu hiện tại.")
         result = db.execute(
-            "UPDATE users SET password_hash = ?, must_change_password = 1 "
+            "UPDATE users SET password_hash = ?, must_change_password = 1, version = ? "
             "WHERE user_id = ? AND email = ? AND role = 'ADMIN' AND is_active = 1",
-            (hashed, target.user_id, target.email),
+            (hashed, str(uuid4()), target.user_id, target.email),
         )
         if result.rowcount != 1:
             raise RecoveryError("Không xác nhận được đúng một tài khoản cần khôi phục.")
@@ -203,6 +211,17 @@ def recover_admin(target: RecoveryTarget, password: str) -> RecoveryResult:
                 "account:" + digest("password-change:" + target.user_id),
             ),
         ).rowcount
+        after = db.execute(
+            "SELECT * FROM users WHERE user_id=?", (target.user_id,)
+        ).fetchone()
+        account_activity.write_event(
+            db,
+            AuditActor("LOCAL_RECOVERY", "Khôi phục Admin cục bộ"),
+            target.user_id,
+            "ADMIN_RECOVERED",
+            row,
+            after,
+        )
         db.commit()
     return RecoveryResult(revoked, cleared)
 

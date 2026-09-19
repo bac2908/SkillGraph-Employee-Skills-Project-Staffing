@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.core.concurrency import VersionConflict
 from app.core.exceptions import (
     ResourceConflictError,
     ResourceNotFoundError,
@@ -17,6 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(VersionConflict)
+    async def version_conflict(_: Request, exc: VersionConflict) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status,
+            content={"detail": str(exc), "code": "stale_version"},
+        )
+
     @app.exception_handler(AuthError)
     async def auth_error_handler(_: Request, exc: AuthError) -> JSONResponse:
         return JSONResponse(

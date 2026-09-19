@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response, status
 
+from app.api.auth_dependencies import CurrentUser
+from app.core.audit import AuditActor
 from app.schemas.common import ErrorResponse, Page
 from app.schemas.skill import SkillCreate, SkillRead, SkillUpdate
 from app.services.skill_service import SkillService
@@ -46,8 +48,10 @@ def list_skills(
         503: {"model": ErrorResponse},
     },
 )
-def create_skill(payload: SkillCreate) -> dict:
-    return service.create(payload.model_dump(mode="json"))
+def create_skill(payload: SkillCreate, user: CurrentUser) -> dict:
+    return service.create(
+        payload.model_dump(mode="json"), actor=AuditActor.from_user(user)
+    )
 
 
 @router.get(
@@ -73,10 +77,14 @@ def get_skill(skill_id: SkillPath) -> dict:
         503: {"model": ErrorResponse},
     },
 )
-def update_skill(skill_id: SkillPath, payload: SkillUpdate) -> dict:
+def update_skill(skill_id: SkillPath, payload: SkillUpdate, user: CurrentUser) -> dict:
     return service.update(
         skill_id,
-        payload.model_dump(exclude_unset=True, mode="json"),
+        payload.model_dump(
+            exclude_unset=True, exclude={"expected_version"}, mode="json"
+        ),
+        actor=AuditActor.from_user(user),
+        expected_version=payload.expected_version,
     )
 
 
@@ -90,6 +98,6 @@ def update_skill(skill_id: SkillPath, payload: SkillUpdate) -> dict:
         503: {"model": ErrorResponse},
     },
 )
-def delete_skill(skill_id: SkillPath) -> Response:
-    service.delete(skill_id)
+def delete_skill(skill_id: SkillPath, user: CurrentUser) -> Response:
+    service.delete(skill_id, actor=AuditActor.from_user(user))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

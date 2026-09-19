@@ -1,11 +1,13 @@
 from neo4j import Transaction
-from neo4j.exceptions import ConstraintError
 
+from app.core.audit import AuditActor
 from app.db.graph import graph_db
-from app.repositories.errors import DuplicateRecordError, RepositoryError
+from app.repositories.errors import RepositoryError
+from app.repositories.node_mutations import mutate_node
 
 EMPLOYEE_FIELDS = """
 employee.employee_id AS employee_id,
+coalesce(employee.version, '0') AS version,
 employee.name AS name,
 employee.email AS email,
 employee.title AS title,
@@ -98,8 +100,7 @@ def _list_employees(
         **parameters,
     ).single()
     items = [
-        record.data()
-        for record in transaction.run(LIST_EMPLOYEES_QUERY, **parameters)
+        record.data() for record in transaction.run(LIST_EMPLOYEES_QUERY, **parameters)
     ]
     return items, total_record["total"] if total_record else 0
 
@@ -153,37 +154,22 @@ def employee_email_exists(
         ) from exc
 
 
-def create_employee(properties: dict) -> dict:
-    try:
-        with graph_db.driver.session() as session:
-            record = session.run(
-                CREATE_EMPLOYEE_QUERY,
-                properties=properties,
-            ).single()
-            if record is None:
-                raise EmployeeRepositoryError("Employee was not created.")
-            return record.data()
-    except ConstraintError as exc:
-        raise DuplicateRecordError("Employee already exists.") from exc
-    except RepositoryError:
-        raise
-    except Exception as exc:
-        raise EmployeeRepositoryError("Unable to create employee.") from exc
+def create_employee(properties: dict, *, actor: AuditActor) -> dict:
+    return mutate_node(
+        "EMPLOYEE", properties["employee_id"], "create", properties, actor
+    )
 
 
-def update_employee(employee_id: str, updates: dict) -> dict | None:
-    try:
-        with graph_db.driver.session() as session:
-            record = session.run(
-                UPDATE_EMPLOYEE_QUERY,
-                employee_id=employee_id,
-                updates=updates,
-            ).single()
-            return record.data() if record else None
-    except ConstraintError as exc:
-        raise DuplicateRecordError("Employee update is not unique.") from exc
-    except Exception as exc:
-        raise EmployeeRepositoryError("Unable to update employee.") from exc
+def update_employee(
+    employee_id: str,
+    updates: dict,
+    *,
+    actor: AuditActor,
+    expected_version: str | None = None,
+) -> dict | None:
+    return mutate_node(
+        "EMPLOYEE", employee_id, "update", updates, actor, expected_version
+    )
 
 
 def _delete_employee(
@@ -206,9 +192,5 @@ def _delete_employee(
     return relationship_count
 
 
-def delete_employee(employee_id: str) -> int | None:
-    try:
-        with graph_db.driver.session() as session:
-            return session.execute_write(_delete_employee, employee_id)
-    except Exception as exc:
-        raise EmployeeRepositoryError("Unable to delete employee.") from exc
+def delete_employee(employee_id: str, *, actor: AuditActor) -> int | None:
+    return mutate_node("EMPLOYEE", employee_id, "delete", {}, actor)

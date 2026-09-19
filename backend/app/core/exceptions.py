@@ -13,9 +13,7 @@ class ResourceConflictError(ApplicationError):
 
 class ResourceAlreadyExistsError(ResourceConflictError):
     def __init__(self, resource: str, field: str, value: str) -> None:
-        super().__init__(
-            f"{resource} with {field} '{value}' already exists."
-        )
+        super().__init__(f"{resource} with {field} '{value}' already exists.")
 
 
 class ResourceInUseError(ResourceConflictError):

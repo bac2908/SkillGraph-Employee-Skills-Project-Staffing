@@ -1,3 +1,4 @@
+from app.core.audit import AuditActor
 from app.core.exceptions import (
     ResourceAlreadyExistsError,
     ResourceInUseError,
@@ -37,7 +38,7 @@ class EmployeeService:
         return employee
 
     @staticmethod
-    def create(properties: dict) -> dict:
+    def create(properties: dict, *, actor: AuditActor) -> dict:
         employee_id = properties["employee_id"]
         if employee_repository.get_employee(employee_id) is not None:
             raise ResourceAlreadyExistsError(
@@ -53,7 +54,7 @@ class EmployeeService:
             )
 
         try:
-            return employee_repository.create_employee(properties)
+            return employee_repository.create_employee(properties, actor=actor)
         except DuplicateRecordError as exc:
             raise ResourceAlreadyExistsError(
                 "Employee",
@@ -62,7 +63,13 @@ class EmployeeService:
             ) from exc
 
     @staticmethod
-    def update(employee_id: str, updates: dict) -> dict:
+    def update(
+        employee_id: str,
+        updates: dict,
+        *,
+        actor: AuditActor,
+        expected_version: str | None = None,
+    ) -> dict:
         employee = employee_repository.get_employee(employee_id)
         if employee is None:
             raise ResourceNotFoundError("Employee", employee_id)
@@ -78,6 +85,8 @@ class EmployeeService:
             updated_employee = employee_repository.update_employee(
                 employee_id,
                 updates,
+                actor=actor,
+                expected_version=expected_version,
             )
         except DuplicateRecordError as exc:
             raise ResourceAlreadyExistsError(
@@ -91,8 +100,10 @@ class EmployeeService:
         return updated_employee
 
     @staticmethod
-    def delete(employee_id: str) -> None:
-        relationship_count = employee_repository.delete_employee(employee_id)
+    def delete(employee_id: str, *, actor: AuditActor) -> None:
+        relationship_count = employee_repository.delete_employee(
+            employee_id, actor=actor
+        )
         if relationship_count is None:
             raise ResourceNotFoundError("Employee", employee_id)
         if relationship_count > 0:

@@ -2999,3 +2999,9 @@ main.auth-main {
     grid-template-columns: 1fr;
   }
 }
+
+.conflict-review { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: #fff8ed; }
+.conflict-review td { white-space: normal; overflow-wrap: anywhere; }
+.conflict-review p { margin: .75rem 0; }
+.activity-source { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.activity-source button[aria-pressed="true"] { border-color: #246a53; background: #e8f2e9; }

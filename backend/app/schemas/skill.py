@@ -31,3 +31,4 @@ class SkillUpdate(PartialUpdateModel):
 
 class SkillRead(SkillFields):
     skill_id: SkillId
+    version: str = "0"

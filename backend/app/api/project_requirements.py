@@ -67,6 +67,7 @@ def upsert_project_requirement(
         payload.min_level,
         payload.priority,
         actor=AuditActor.from_user(user),
+        expected_version=payload.expected_version,
     )
     if created:
         response.status_code = status.HTTP_201_CREATED
